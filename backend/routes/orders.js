@@ -168,25 +168,174 @@ router.get('/:id', authenticate, async (req, res) => {
 
 // PUT /api/orders/:id/status (admin)
 router.put('/:id/status', requireAdmin, async (req, res) => {
+
   try {
+
+    console.log("===== ORDER STATUS UPDATE START =====");
+
+    console.log("ADMIN USER:");
+    console.log(req.user);
+
+    console.log("ORDER ID:");
+    console.log(req.params.id);
+
+    console.log("REQUEST BODY:");
+    console.log(req.body);
+
+
+
     const { status, tracking_number } = req.body;
-    const validStatuses = ['pending','confirmed','processing','packed','shipped','delivered','cancelled','refunded'];
-    if (!validStatuses.includes(status)) return res.status(400).json({ error: 'Invalid status' });
+
+
+
+    const validStatuses = [
+      'pending',
+      'confirmed',
+      'processing',
+      'packed',
+      'shipped',
+      'delivered',
+      'cancelled',
+      'refunded'
+    ];
+
+
+
+    if (!status) {
+
+      return res.status(400).json({
+        error: "Status is required"
+      });
+
+    }
+
+
+
+    if (!validStatuses.includes(status)) {
+
+      return res.status(400).json({
+        error: "Invalid status",
+        received: status,
+        allowed: validStatuses
+      });
+
+    }
+
+
+
+    const orderCheck = await query(
+      `
+      SELECT id, status
+      FROM orders
+      WHERE id=$1
+      `,
+      [
+        req.params.id
+      ]
+    );
+
+
+
+    if (!orderCheck.rows.length) {
+
+      return res.status(404).json({
+        error:"Order does not exist"
+      });
+
+    }
+
+
+
 
     const result = await query(
-      `UPDATE orders SET status=$1, tracking_number=COALESCE($2, tracking_number),
-        shipped_at=CASE WHEN $1='shipped' THEN NOW() ELSE shipped_at END,
-        delivered_at=CASE WHEN $1='delivered' THEN NOW() ELSE delivered_at END,
-        updated_at=NOW()
-       WHERE id=$3 RETURNING *`,
-      [status, tracking_number || null, req.params.id]
+      `
+      UPDATE orders
+
+      SET
+
+      status=$1,
+
+      tracking_number=
+      COALESCE($2, tracking_number),
+
+
+      shipped_at=
+      CASE
+        WHEN $1='shipped'
+        THEN NOW()
+        ELSE shipped_at
+      END,
+
+
+      delivered_at=
+      CASE
+        WHEN $1='delivered'
+        THEN NOW()
+        ELSE delivered_at
+      END,
+
+
+      updated_at=NOW()
+
+
+      WHERE id=$3
+
+
+      RETURNING *
+      `,
+      [
+        status,
+        tracking_number || null,
+        req.params.id
+      ]
     );
-    if (!result.rows.length) return res.status(404).json({ error: 'Order not found' });
-    res.json({ order: result.rows[0] });
-  } catch (error) {
-    console.error('Failed to update order status:', error);
-    res.status(500).json({ error: 'Failed to update order status' });
+
+
+
+
+    console.log("UPDATED ORDER:");
+    console.log(result.rows[0]);
+
+
+
+    res.status(200).json({
+
+      success:true,
+
+      message:"Order status updated successfully",
+
+      order:result.rows[0]
+
+    });
+
+
+
+  } catch(error) {
+
+
+    console.error(
+      "ORDER STATUS UPDATE ERROR:"
+    );
+
+    console.error(error);
+
+
+
+    res.status(500).json({
+
+      success:false,
+
+      error:error.message,
+
+      detail:error.detail || null,
+
+      code:error.code || null
+
+    });
+
+
   }
+
 });
 
 // DELETE /api/orders/:id (admin)
