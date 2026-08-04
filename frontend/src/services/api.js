@@ -328,4 +328,5 @@ export const bankSettingsAPI = {
   },
 };
 
+export { api };
 export default api;
