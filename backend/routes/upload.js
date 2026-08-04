@@ -20,7 +20,11 @@ router.post('/image', authenticate, upload.single('image'), async (req, res) => 
       const result = await uploadImage(req.file.path);
       url = result.url; public_id = result.public_id;
     } else {
-      url = `/uploads/${req.file.filename}`;
+      // Return an absolute URL. A relative path like "/uploads/x.jpg" resolves
+      // against the *frontend's* origin (e.g. Netlify) when the SPA is hosted
+      // on a different domain than the API, so the image 404s and never shows
+      // up (e.g. in the announcement popup on load).
+      url = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
       public_id = req.file.filename;
     }
     // Track in media library
@@ -49,7 +53,7 @@ router.post('/images', authenticate, upload.array('images', 10), async (req, res
     }
 
     const images = req.files.map((f) => ({
-      url: `/uploads/${f.filename}`,
+      url: `${req.protocol}://${req.get('host')}/uploads/${f.filename}`,
       public_id: f.filename,
     }));
     res.json({ images });

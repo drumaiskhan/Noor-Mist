@@ -347,7 +347,7 @@ export default function Announcements() {
 
     );
 
-  }id="4j9vf"
+  }
   return (
 
     <div className="p-6 text-white">

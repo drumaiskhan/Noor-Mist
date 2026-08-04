@@ -5,6 +5,12 @@
   force = true
 
 [[redirects]]
+  from = "/uploads/*"
+  to = "https://noor-mist.onrender.com/uploads/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
