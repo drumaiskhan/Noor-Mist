@@ -1,0 +1,36 @@
+VERDICT: APPROVED_WITH_COMMENTS
+The diff is broadly functional and should be accepted, but there is one notable product-image behavior gap to address next.
+
+Critical findings / analysis:
+- The CORS fix in `backend/server.js` correctly handles `CORS_ORIGIN="true"` as boolean allow-all instead of a literal origin string; this resolves the reported cross-origin/admin status update issue.
+- Admin product editing is substantially improved: numeric admin fetch route (`/api/products/admin/:id`) is correctly ordered before slug route, admin listing now includes hidden products, and variant add/update logic is implemented in product update flow.
+- Dashboard/analytics wiring is now real-data driven: backend sales endpoint now returns `salesData/stats/topProducts`, and frontend analytics/dashboard pages consume those payloads and render chart/recent-order content.
+- Non-blocking but important gap: product image “change” is only partially implemented. In `PUT /api/products/:id`, image sync only inserts new URLs; it does not remove deleted images, update existing positions, or reliably reset prior primary flags. So removing/reordering images in edit UI won’t persist correctly.
+- Non-blocking reliability note: image insert errors are swallowed (`.catch(() => {})`), which can mask persistence failures while returning success.
+
+Security: none observed of serious relevance (no high-confidence SAST findings; no new obvious authz/injection regressions in changed paths).
+
+Next actions:
+1) In product update, replace insert-only image handling with true reconciliation (delete removed images, update positions, enforce single primary image).
+2) Remove silent catch on image writes; surface failures (or aggregate partial-failure response) so admin sees accurate save status.
+3) Add a targeted integration test for admin edit flow covering: remove existing image, add new image, and verify DB state after update.
+
+VERDICT: APPROVED_WITH_COMMENTS
+VERDICT: APPROVED_WITH_COMMENTS
+The diff is broadly functional and should be accepted, but there is one notable product-image behavior gap to address next.
+
+Critical findings / analysis:
+- The CORS fix in `backend/server.js` correctly handles `CORS_ORIGIN="true"` as boolean allow-all instead of a literal origin string; this resolves the reported cross-origin/admin status update issue.
+- Admin product editing is substantially improved: numeric admin fetch route (`/api/products/admin/:id`) is correctly ordered before slug route, admin listing now includes hidden products, and variant add/update logic is implemented in product update flow.
+- Dashboard/analytics wiring is now real-data driven: backend sales endpoint now returns `salesData/stats/topProducts`, and frontend analytics/dashboard pages consume those payloads and render chart/recent-order content.
+- Non-blocking but important gap: product image “change” is only partially implemented. In `PUT /api/products/:id`, image sync only inserts new URLs; it does not remove deleted images, update existing positions, or reliably reset prior primary flags. So removing/reordering images in edit UI won’t persist correctly.
+- Non-blocking reliability note: image insert errors are swallowed (`.catch(() => {})`), which can mask persistence failures while returning success.
+
+Security: none observed of serious relevance (no high-confidence SAST findings; no new obvious authz/injection regressions in changed paths).
+
+Next actions:
+1) In product update, replace insert-only image handling with true reconciliation (delete removed images, update positions, enforce single primary image).
+2) Remove silent catch on image writes; surface failures (or aggregate partial-failure response) so admin sees accurate save status.
+3) Add a targeted integration test for admin edit flow covering: remove existing image, add new image, and verify DB state after update.
+
+VERDICT: APPROVED_WITH_COMMENTS

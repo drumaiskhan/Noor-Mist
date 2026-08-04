@@ -6,8 +6,8 @@ const { authenticate, requireAdmin, optionalAuth } = require('../middleware/auth
 const router = express.Router();
 
 // Build product query with filters
-function buildProductQuery(params, isAdmin = false) {
-  const conditions = isAdmin ? [] : ['p.is_visible = true'];
+function buildProductQuery(params) {
+  const conditions = ['p.is_visible = true'];
   const values = [];
   let idx = 1;
 
@@ -20,10 +20,6 @@ function buildProductQuery(params, isAdmin = false) {
   if (params.bestseller === 'true') { conditions.push('p.is_bestseller = true'); }
   if (params.new_arrival === 'true') { conditions.push('p.is_new_arrival = true'); }
   if (params.limited_edition === 'true') { conditions.push('p.is_limited_edition = true'); }
-  if (params.status && params.status !== 'all') {
-    conditions.push(`p.status = $${idx++}`);
-    values.push(params.status);
-  }
   if (params.search) {
     conditions.push(`(p.name ILIKE $${idx} OR p.brand ILIKE $${idx} OR p.description ILIKE $${idx})`);
     values.push(`%${params.search}%`);
@@ -55,9 +51,7 @@ router.get('/', optionalAuth, async (req, res) => {
     const limit = Math.min(parseInt(req.query.limit) || 24, 100);
     const offset = (page - 1) * limit;
 
-    // Admin requests can see all products regardless of visibility
-    const isAdmin = req.user?.role === 'admin';
-    const { conditions, values, orderBy, idx } = buildProductQuery(req.query, isAdmin);
+    const { conditions, values, orderBy, idx } = buildProductQuery(req.query);
     const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
 
     const countResult = await query(
@@ -68,13 +62,10 @@ router.get('/', optionalAuth, async (req, res) => {
 
     const result = await query(
       `SELECT p.*,
-        c.name AS category_name,
-        (SELECT MIN(COALESCE(pv.sale_price, pv.price)) FROM product_variants pv WHERE pv.product_id = p.id AND pv.is_active = true) AS min_price,
-        (SELECT COALESCE(SUM(pv.quantity), 0) FROM product_variants pv WHERE pv.product_id = p.id AND pv.is_active = true) AS total_stock,
+        (SELECT json_agg(pi ORDER BY pi.position) FROM product_images pi WHERE pi.product_id = p.id) AS images,
         (SELECT json_agg(pv ORDER BY pv.size_ml) FROM product_variants pv WHERE pv.product_id = p.id AND pv.is_active = true) AS variants,
         (SELECT json_agg(pi) FROM product_images pi WHERE pi.product_id = p.id AND pi.is_primary = true LIMIT 1) AS primary_image
        FROM products p
-       LEFT JOIN categories c ON p.category_id = c.id
        ${where}
        ORDER BY ${orderBy}
        LIMIT $${idx} OFFSET $${idx + 1}`,
@@ -272,16 +263,16 @@ router.post('/import-xml', requireAdmin, async (req, res) => {
   }
 });
 
-// GET /api/products/admin/:id — fetch a single product by numeric ID for admin editing
-router.get('/admin/:id', requireAdmin, async (req, res) => {
+// GET /api/products/id/:id (admin — fetch by numeric id, used by the edit
+// screen. Unlike the public /:slug route below, this does NOT require
+// is_visible=true, so draft/archived products can still be opened for editing.)
+router.get('/id/:id', requireAdmin, async (req, res) => {
   try {
     const result = await query(
       `SELECT p.*,
         (SELECT json_agg(pi ORDER BY pi.position) FROM product_images pi WHERE pi.product_id = p.id) AS images,
-        (SELECT json_agg(pv ORDER BY pv.size_ml) FROM product_variants pv WHERE pv.product_id = p.id) AS variants,
-        c.name AS category_name, c.slug AS category_slug
+        (SELECT json_agg(pv ORDER BY pv.size_ml) FROM product_variants pv WHERE pv.product_id = p.id) AS variants
        FROM products p
-       LEFT JOIN categories c ON p.category_id = c.id
        WHERE p.id = $1`,
       [req.params.id]
     );
@@ -330,6 +321,70 @@ router.get('/:slug', optionalAuth, async (req, res) => {
   }
 });
 
+// Insert/sync the variants + images the admin form submits alongside a
+// product. The form always sends the *full* current lists, so:
+//  - a variant row with an `id` is an existing row → UPDATE it
+//  - a variant row with no `id` is new → INSERT it
+//  - any existing variant not present in the submitted list was removed
+//    in the form → soft-delete it (is_active=false) rather than a hard
+//    delete, since past orders may still reference it
+//  - images are simpler: the whole set is replaced, first one is primary
+async function syncVariants(productId, variants, slug) {
+  const submittedIds = [];
+  for (const v of variants || []) {
+    const sizeMl = parseInt(v.size_ml) || 0;
+    const price = parseFloat(v.price) || 0;
+    if (!sizeMl || !price) continue; // skip incomplete rows rather than fail the whole save
+    const salePrice = v.sale_price ? parseFloat(v.sale_price) : null;
+    const quantity = parseInt(v.quantity) || 0;
+    const sku = (v.sku && v.sku.trim()) || `${(slug || 'NM').toUpperCase().slice(0, 8)}-${sizeMl}ML-${Date.now()}`;
+
+    if (v.id) {
+      const updated = await query(
+        `UPDATE product_variants SET size_ml=$1, price=$2, sale_price=$3, sku=$4, quantity=$5,
+          is_active=true, updated_at=NOW()
+         WHERE id=$6 AND product_id=$7 RETURNING id`,
+        [sizeMl, price, salePrice, sku, quantity, v.id, productId]
+      );
+      if (updated.rows.length) submittedIds.push(updated.rows[0].id);
+    } else {
+      const inserted = await query(
+        `INSERT INTO product_variants (product_id, size_ml, price, sale_price, sku, quantity)
+         VALUES ($1,$2,$3,$4,$5,$6)
+         ON CONFLICT (sku) DO UPDATE SET size_ml=EXCLUDED.size_ml, price=EXCLUDED.price,
+           sale_price=EXCLUDED.sale_price, quantity=EXCLUDED.quantity, is_active=true
+         RETURNING id`,
+        [productId, sizeMl, price, salePrice, sku, quantity]
+      );
+      submittedIds.push(inserted.rows[0].id);
+    }
+  }
+
+  if (submittedIds.length) {
+    await query(
+      `UPDATE product_variants SET is_active=false WHERE product_id=$1 AND id != ALL($2::int[])`,
+      [productId, submittedIds]
+    );
+  }
+}
+
+async function syncImages(productId, images) {
+  if (!images) return; // undefined = form didn't touch images, leave as-is
+  await query('DELETE FROM product_images WHERE product_id=$1', [productId]);
+  let position = 0;
+  for (const img of images) {
+    const url = typeof img === 'string' ? img : img.url;
+    if (!url) continue;
+    const publicId = typeof img === 'string' ? null : img.public_id || null;
+    await query(
+      `INSERT INTO product_images (product_id, url, public_id, is_primary, position)
+       VALUES ($1,$2,$3,$4,$5)`,
+      [productId, url, publicId, position === 0, position]
+    );
+    position += 1;
+  }
+}
+
 // POST /api/products (admin)
 router.post('/', requireAdmin, async (req, res) => {
   try {
@@ -338,6 +393,7 @@ router.post('/', requireAdmin, async (req, res) => {
       gender, top_notes, middle_notes, base_notes, longevity, projection, season, occasion,
       category_id, collection_id, is_featured, is_bestseller, is_new_arrival,
       is_limited_edition, is_gift_set, is_visible, meta_title, meta_description,
+      variants, images,
     } = req.body;
 
     let slug = slugify(name, { lower: true, strict: true });
@@ -359,7 +415,11 @@ router.post('/', requireAdmin, async (req, res) => {
        meta_title, meta_description]
     );
 
-    res.status(201).json({ product: result.rows[0] });
+    const product = result.rows[0];
+    await syncVariants(product.id, variants, slug);
+    await syncImages(product.id, images);
+
+    res.status(201).json({ product });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Failed to create product' });
@@ -377,8 +437,6 @@ router.put('/:id', requireAdmin, async (req, res) => {
       variants, images,
     } = req.body;
 
-    const productId = req.params.id;
-
     const result = await query(
       `UPDATE products SET name=$1, description=$2, short_description=$3, brand=$4,
         fragrance_family=$5, concentration=$6, gender=$7, top_notes=$8, middle_notes=$9,
@@ -392,55 +450,16 @@ router.put('/:id', requireAdmin, async (req, res) => {
        season || [], occasion || [], category_id || null, collection_id || null,
        is_featured || false, is_bestseller || false, is_new_arrival !== false,
        is_limited_edition || false, is_gift_set || false, is_visible !== false,
-       meta_title, meta_description, productId]
+       meta_title, meta_description, req.params.id]
     );
 
     if (!result.rows.length) return res.status(404).json({ error: 'Product not found' });
+    const product = result.rows[0];
 
-    // Upsert variants if provided
-    if (Array.isArray(variants)) {
-      for (const v of variants) {
-        if (v.id) {
-          // Update existing variant
-          await query(
-            `UPDATE product_variants SET size_ml=$1, price=$2, sale_price=$3, sku=$4,
-              quantity=$5, updated_at=NOW()
-             WHERE id=$6 AND product_id=$7`,
-            [v.size_ml, parseFloat(v.price) || 0, v.sale_price ? parseFloat(v.sale_price) : null,
-             v.sku || null, parseInt(v.quantity) || 0, v.id, productId]
-          );
-        } else {
-          // Insert new variant
-          const sku = v.sku || `${productId}-${v.size_ml}ML-${Date.now()}`;
-          await query(
-            `INSERT INTO product_variants (product_id, size_ml, price, sale_price, sku, quantity)
-             VALUES ($1,$2,$3,$4,$5,$6) ON CONFLICT (sku) DO UPDATE SET
-             size_ml=EXCLUDED.size_ml, price=EXCLUDED.price, sale_price=EXCLUDED.sale_price,
-             quantity=EXCLUDED.quantity, updated_at=NOW()`,
-            [productId, v.size_ml, parseFloat(v.price) || 0,
-             v.sale_price ? parseFloat(v.sale_price) : null,
-             sku, parseInt(v.quantity) || 0]
-          );
-        }
-      }
-    }
+    await syncVariants(product.id, variants, product.slug);
+    await syncImages(product.id, images);
 
-    // Sync images if provided: insert any new image URLs not already in the DB
-    if (Array.isArray(images) && images.length > 0) {
-      for (let i = 0; i < images.length; i++) {
-        const img = images[i];
-        const url = img.url || img;
-        if (!url) continue;
-        await query(
-          `INSERT INTO product_images (product_id, url, public_id, is_primary, position)
-           VALUES ($1,$2,$3,$4,$5)
-           ON CONFLICT DO NOTHING`,
-          [productId, url, img.public_id || null, i === 0, i]
-        ).catch(() => {}); // ignore conflicts gracefully
-      }
-    }
-
-    res.json({ product: result.rows[0] });
+    res.json({ product });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Failed to update product' });

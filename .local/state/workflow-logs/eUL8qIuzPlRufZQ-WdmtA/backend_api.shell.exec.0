@@ -1,0 +1,25 @@
+[1G[0K⠙[1G[0K⠹[1G[0K⠸[1G[0K⠼[1G[0K⠴[1G[0K⠦[1G[0K⠧[1G[0K⠇[1G[0K⠏[1G[0K⠋[1G[0K⠙[1G[0K
+up to date, audited 138 packages in 1s
+[1G[0K⠙[1G[0K
+[1G[0K⠙[1G[0K22 packages are looking for funding
+[1G[0K⠙[1G[0K  run `npm fund` for details
+[1G[0K⠙[1G[0K
+[31m[1m4[22m[39m vulnerabilities (1 [33m[1mmoderate[22m[39m, 3 [31m[1mhigh[22m[39m)
+
+To address all issues (including breaking changes), run:
+  npm audit fix --force
+
+Run `npm audit` for details.
+[1G[0K⠙[1G[0KInitializing database...
+Schema created successfully
+Database initialization complete
+Noor Mist API running on port 3001
+[0mGET /api/settings [36m304[0m 6.131 ms - -[0m
+[0mGET /api/themes/active [36m304[0m 12.321 ms - -[0m
+[0mGET /api/settings [36m304[0m 2.112 ms - -[0m
+[0mGET /api/themes/active [36m304[0m 1.265 ms - -[0m
+[0mGET /api/themes/active [32m200[0m 4.237 ms - -[0m
+[0mGET /api/settings [32m200[0m 3.823 ms - -[0m
+[0mGET /api/themes/active [36m304[0m 4.502 ms - -[0m
+[0mGET /api/settings [36m304[0m 5.034 ms - -[0m
+[0mPOST /api/auth/login [32m200[0m 422.792 ms - 364[0m

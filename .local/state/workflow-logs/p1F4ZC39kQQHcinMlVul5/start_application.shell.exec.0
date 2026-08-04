@@ -1,0 +1,71 @@
+[1G[0K⠙[1G[0K⠹[1G[0K⠸[1G[0K⠼[1G[0K⠴[1G[0K⠦[1G[0K⠧[1G[0K⠇[1G[0K⠏[1G[0K⠋[1G[0K⠙[1G[0K⠹[1G[0K⠸[1G[0K⠼[1G[0K⠴[1G[0K⠦[1G[0K⠧[1G[0K⠇[1G[0K⠏[1G[0K⠋[1G[0K⠙[1G[0K⠹[1G[0K⠸[1G[0K⠼[1G[0K[1mnpm[22m [33mwarn[39m [94mdeprecated[39m three-mesh-bvh@0.7.8: Deprecated due to three.js version incompatibility. Please use v0.8.0, instead.
+[1G[0K⠼[1G[0K⠴[1G[0K⠦[1G[0K⠧[1G[0K⠇[1G[0K⠏[1G[0K⠋[1G[0K⠙[1G[0K⠹[1G[0K⠸[1G[0K⠼[1G[0K⠴[1G[0K⠦[1G[0K⠧[1G[0K⠇[1G[0K⠏[1G[0K⠋[1G[0K⠙[1G[0K[1mnpm[22m [33mwarn[39m [94mdeprecated[39m @studio-freight/lenis@1.0.42: The '@studio-freight/lenis' package has been renamed to 'lenis'. Please update your dependencies: npm install lenis and visit the documentation: https://www.npmjs.com/package/lenis
+[1G[0K⠙[1G[0K⠹[1G[0K⠸[1G[0K⠼[1G[0K⠴[1G[0K[1mnpm[22m [33mwarn[39m [94mdeprecated[39m recharts@2.15.4: 1.x and 2.x branches are no longer active. Bump to Recharts v3 to receive latest features and bugfixes. See https://github.com/recharts/recharts/wiki/3.0-migration-guide
+[1G[0K⠴[1G[0K⠦[1G[0K⠧[1G[0K⠇[1G[0K⠏[1G[0K⠋[1G[0K⠙[1G[0K⠹[1G[0K⠸[1G[0K⠼[1G[0K⠴[1G[0K⠦[1G[0K⠧[1G[0K⠇[1G[0K⠏[1G[0K⠋[1G[0K⠙[1G[0K⠹[1G[0K⠸[1G[0K⠼[1G[0K⠴[1G[0K⠦[1G[0K⠧[1G[0K⠇[1G[0K⠏[1G[0K⠋[1G[0K⠙[1G[0K⠹[1G[0K⠸[1G[0K⠼[1G[0K⠴[1G[0K⠦[1G[0K
+added 280 packages, and audited 281 packages in 8s
+[1G[0K⠦[1G[0K
+[1G[0K⠦[1G[0K36 packages are looking for funding
+[1G[0K⠦[1G[0K  run `npm fund` for details
+[1G[0K⠦[1G[0K
+[31m[1m4[22m[39m vulnerabilities (3 [33m[1mmoderate[22m[39m, 1 [31m[1mhigh[22m[39m)
+
+To address issues that do not require attention, run:
+  npm audit fix
+
+To address all issues (including breaking changes), run:
+  npm audit fix --force
+
+Run `npm audit` for details.
+[1G[0K⠧[1G[0K[1G[0K⠙[1G[0K
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+[1;1H[0J
+  [32m[1mVITE[22m v5.4.21[39m  [2mready in [0m[1m195[22m[2m[0m ms[22m
+
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m5000[22m/[39m
+  [32m➜[39m  [1mNetwork[22m: [36mhttp://172.24.0.2:[1m5000[22m/[39m
+[2m[32m  ➜[39m[22m[2m  press [22m[1mh + enter[22m[2m to show help[22m
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+[1;1H[0J[2m11:58:03 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.jsx, /src/styles/globals.css, /src/components/Auth/AdminRoute.jsx, /src/components/Layout/AdminLayout.jsx, /src/components/Layout/MobileNav.jsx, /src/components/Layout/Header.jsx, /src/pages/admin/AdminLogin.jsx, /src/components/Layout/AnnouncementBar.jsx, /src/components/Layout/Footer.jsx, /src/components/Shop/SearchBar.jsx, /src/components/Layout/BottomNav.jsx, /src/components/Cart/CartDrawer.jsx, /src/components/Cart/CartItem.jsx, /src/components/Cart/CartSummary.jsx, /src/components/Home/BestSellers.jsx, /src/components/Product/ProductCard.jsx, /src/pages/Home.jsx, /src/components/Home/NewArrivals.jsx, /src/components/Home/Testimonials.jsx[22m

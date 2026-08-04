@@ -4,7 +4,6 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
-const compression = require('compression');
 const path = require('path');
 const { initDatabase } = require('./database/init');
 
@@ -12,15 +11,10 @@ const app = express();
 app.set('trust proxy', 1);
 const PORT = process.env.PORT || 3001;
 
-// Compress all responses — faster for everyone
-app.use(compression());
-
 // Security middleware
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
-// CORS_ORIGIN="true" means allow all; otherwise treat as a specific origin string
-const corsOrigin = (!process.env.CORS_ORIGIN || process.env.CORS_ORIGIN === 'true') ? true : process.env.CORS_ORIGIN;
 app.use(cors({
-  origin: corsOrigin,
+  origin: process.env.CORS_ORIGIN || true,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],

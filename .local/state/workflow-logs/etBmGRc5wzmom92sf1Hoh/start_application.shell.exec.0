@@ -1,0 +1,155 @@
+[1G[0K⠙[1G[0K⠹[1G[0K⠸[1G[0K⠼[1G[0K⠴[1G[0K⠦[1G[0K⠧[1G[0K⠇[1G[0K⠏[1G[0K⠋[1G[0K
+up to date, audited 281 packages in 1s
+[1G[0K⠋[1G[0K
+[1G[0K⠋[1G[0K36 packages are looking for funding
+[1G[0K⠋[1G[0K  run `npm fund` for details
+[1G[0K⠋[1G[0K
+[31m[1m4[22m[39m vulnerabilities (3 [33m[1mmoderate[22m[39m, 1 [31m[1mhigh[22m[39m)
+
+To address issues that do not require attention, run:
+  npm audit fix
+
+To address all issues (including breaking changes), run:
+  npm audit fix --force
+
+Run `npm audit` for details.
+[1G[0K⠙[1G[0K[1G[0K⠙[1G[0K
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+[1;1H[0J
+  [32m[1mVITE[22m v5.4.21[39m  [2mready in [0m[1m264[22m[2m[0m ms[22m
+
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m5000[22m/[39m
+  [32m➜[39m  [1mNetwork[22m: [36mhttp://172.24.0.2:[1m5000[22m/[39m
+[2m[32m  ➜[39m[22m[2m  press [22m[1mh + enter[22m[2m to show help[22m
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+[1;1H[0J[2m12:01:25 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.jsx, /src/styles/globals.css, /src/components/Auth/AdminRoute.jsx, /src/components/Layout/AdminLayout.jsx, /src/components/Layout/Header.jsx, /src/components/Layout/MobileNav.jsx, /src/pages/admin/AdminLogin.jsx, /src/components/Layout/Footer.jsx, /src/components/Shop/SearchBar.jsx, /src/components/Layout/AnnouncementBar.jsx, /src/components/Layout/BottomNav.jsx, /src/components/Cart/CartDrawer.jsx, /src/components/Cart/CartSummary.jsx, /src/components/Cart/CartItem.jsx[22m
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+[1;1H[0J[2m12:02:58 PM[22m [31m[1m[vite][22m[39m [31mInternal server error: /home/runner/workspace/frontend/src/pages/admin/Dashboard.jsx: Unexpected token (6:1)
+
+[0m [90m 4 |[31m [36mimport[31m { useQuery } [36mfrom[31m [32m'@tanstack/react-query'[31m[33m;[31m
+ [90m 5 |[31m [36mimport[31m { analyticsAPI } [36mfrom[31m [32m'../../services/api'[31m[33m;[31m
+[31m[1m>[22m[31m[90m 6 |[31m [33m<<[31m[33m<<[31m[33m<<[31m[33m<[31m [33mHEAD[31m
+ [90m   |[31m  [31m[1m^[22m[31m
+ [90m 7 |[31m [36mimport[31m { [33mHiCurrencyDollar[31m[33m,[31m [33mHiShoppingBag[31m[33m,[31m [33mHiUsers[31m[33m,[31m [33mHiCube[31m } [36mfrom[31m [32m'react-icons/hi'[31m[33m;[31m
+ [90m 8 |[31m [36mimport[31m { [33mLineChart[31m[33m,[31m [33mLine[31m[33m,[31m [33mXAxis[31m[33m,[31m [33mYAxis[31m[33m,[31m [33mCartesianGrid[31m[33m,[31m [33mTooltip[31m[33m,[31m [33mResponsiveContainer[31m } [36mfrom[31m [32m'recharts'[31m[33m;[31m
+ [90m 9 |[31m [36mimport[31m { formatPrice[33m,[31m formatDate } [36mfrom[31m [32m'../../utils/helpers'[31m[33m;[31m[0m[39m
+  Plugin: [35mvite:react-babel[39m
+  File: [36m/home/runner/workspace/frontend/src/pages/admin/Dashboard.jsx[39m:6:1
+[33m  4  |  import { useQuery } from '@tanstack/react-query';
+  5  |  import { analyticsAPI } from '../../services/api';
+  6  |  <<<<<<< HEAD
+     |   ^
+  7  |  import { HiCurrencyDollar, HiShoppingBag, HiUsers, HiCube } from 'react-icons/hi';
+  8  |  import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';[39m
+      at constructor (/home/runner/workspace/frontend/node_modules/@babel/parser/lib/index.js:369:19)
+      at JSXParserMixin.raise (/home/runner/workspace/frontend/node_modules/@babel/parser/lib/index.js:6620:19)
+      at JSXParserMixin.unexpected (/home/runner/workspace/frontend/node_modules/@babel/parser/lib/index.js:6640:16)
+      at JSXParserMixin.jsxParseIdentifier (/home/runner/workspace/frontend/node_modules/@babel/parser/lib/index.js:4585:12)
+      at JSXParserMixin.jsxParseNamespacedName (/home/runner/workspace/frontend/node_modules/@babel/parser/lib/index.js:4592:23)
+      at JSXParserMixin.jsxParseElementName (/home/runner/workspace/frontend/node_modules/@babel/parser/lib/index.js:4601:21)
+      at JSXParserMixin.jsxParseOpeningElementAt (/home/runner/workspace/frontend/node_modules/@babel/parser/lib/index.js:4677:22)
+      at JSXParserMixin.jsxParseElementAt (/home/runner/workspace/frontend/node_modules/@babel/parser/lib/index.js:4702:33)
+      at JSXParserMixin.jsxParseElement (/home/runner/workspace/frontend/node_modules/@babel/parser/lib/index.js:4765:17)
+      at JSXParserMixin.parseExprAtom (/home/runner/workspace/frontend/node_modules/@babel/parser/lib/index.js:4775:19)
+      at JSXParserMixin.parseExprSubscripts (/home/runner/workspace/frontend/node_modules/@babel/parser/lib/index.js:11102:23)
+      at JSXParserMixin.parseUpdate (/home/runner/workspace/frontend/node_modules/@babel/parser/lib/index.js:11087:21)
+      at JSXParserMixin.parseMaybeUnary (/home/runner/workspace/frontend/node_modules/@babel/parser/lib/index.js:11067:23)
+      at JSXParserMixin.parseMaybeUnaryOrPrivate (/home/runner/workspace/frontend/node_modules/@babel/parser/lib/index.js:10920:61)
+      at JSXParserMixin.parseExprOps (/home/runner/workspace/frontend/node_modules/@babel/parser/lib/index.js:10925:23)
+      at JSXParserMixin.parseMaybeConditional (/home/runner/workspace/frontend/node_modules/@babel/parser/lib/index.js:10902:23)
+      at JSXParserMixin.parseMaybeAssign (/home/runner/workspace/frontend/node_modules/@babel/parser/lib/index.js:10852:21)
+      at JSXParserMixin.parseExpressionBase (/home/runner/workspace/frontend/node_modules/@babel/parser/lib/index.js:10805:23)
+      at /home/runner/workspace/frontend/node_modules/@babel/parser/lib/index.js:10801:39
+      at JSXParserMixin.allowInAnd (/home/runner/workspace/frontend/node_modules/@babel/parser/lib/index.js:12450:16)
+      at JSXParserMixin.parseExpression (/home/runner/workspace/frontend/node_modules/@babel/parser/lib/index.js:10801:17)
+      at JSXParserMixin.parseStatementContent (/home/runner/workspace/frontend/node_modules/@babel/parser/lib/index.js:12924:23)
+      at JSXParserMixin.parseStatementLike (/home/runner/workspace/frontend/node_modules/@babel/parser/lib/index.js:12796:17)
+      at JSXParserMixin.parseModuleItem (/home/runner/workspace/frontend/node_modules/@babel/parser/lib/index.js:12773:17)
+      at JSXParserMixin.parseBlockOrModuleBlockBody (/home/runner/workspace/frontend/node_modules/@babel/parser/lib/index.js:13345:36)
+      at JSXParserMixin.parseBlockBody (/home/runner/workspace/frontend/node_modules/@babel/parser/lib/index.js:13338:10)
+      at JSXParserMixin.parseProgram (/home/runner/workspace/frontend/node_modules/@babel/parser/lib/index.js:12651:10)
+      at JSXParserMixin.parseTopLevel (/home/runner/workspace/frontend/node_modules/@babel/parser/lib/index.js:12641:25)
+      at JSXParserMixin.parse (/home/runner/workspace/frontend/node_modules/@babel/parser/lib/index.js:14517:25)
+      at parse (/home/runner/workspace/frontend/node_modules/@babel/parser/lib/index.js:14551:38)
+      at parser (/home/runner/workspace/frontend/node_modules/@babel/core/lib/parser/index.js:41:34)
+      at parser.next (<anonymous>)
+      at normalizeFile (/home/runner/workspace/frontend/node_modules/@babel/core/lib/transformation/normalize-file.js:51:37)
+      at normalizeFile.next (<anonymous>)
+      at run (/home/runner/workspace/frontend/node_modules/@babel/core/lib/transformation/index.js:22:50)
+      at run.next (<anonymous>)
+      at transform (/home/runner/workspace/frontend/node_modules/@babel/core/lib/transform.js:22:33)
+      at transform.next (<anonymous>)
+      at step (/home/runner/workspace/frontend/node_modules/gensync/index.js:261:32)
+      at /home/runner/workspace/frontend/node_modules/gensync/index.js:273:13
+      at async.call.result.err.err (/home/runner/workspace/frontend/node_modules/gensync/index.js:223:11)
+      at /home/runner/workspace/frontend/node_modules/gensync/index.js:189:28
+      at /home/runner/workspace/frontend/node_modules/@babel/core/lib/gensync-utils/async.js:67:7
+      at /home/runner/workspace/frontend/node_modules/gensync/index.js:113:33
+      at step (/home/runner/workspace/frontend/node_modules/gensync/index.js:287:14)
+      at /home/runner/workspace/frontend/node_modules/gensync/index.js:273:13
+      at async.call.result.err.err (/home/runner/workspace/frontend/node_modules/gensync/index.js:223:11)

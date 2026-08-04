@@ -1,8 +1,7 @@
 import axios from 'axios';
 
-// Use VITE_API_URL if set, otherwise default to relative /api
-// (Vite dev-server proxies /api → localhost:3001; Netlify redirect proxies it in prod)
-const RAW_API_URL = import.meta.env.VITE_API_URL || "/api";
+const RAW_API_URL = import.meta.env.VITE_API_URL || "https://noor-mist.onrender.com/api";
+// Guard against a misconfigured env var that omits the /api segment
 const API_URL = RAW_API_URL.replace(/\/+$/, "").endsWith("/api")
   ? RAW_API_URL.replace(/\/+$/, "")
   : `${RAW_API_URL.replace(/\/+$/, "")}/api`;
@@ -58,7 +57,9 @@ export const authAPI = {
 export const productAPI = {
   getAll: (params) => api.get('/products', { params }),
   getOne: (slug) => api.get(`/products/${slug}`),
-  getOneById: (id) => api.get(`/products/admin/${id}`),
+  // Admin edit screens link by numeric id, not slug, and need to be able to
+  // load drafts/archived products too — use the dedicated admin endpoint.
+  getOneAdmin: (id) => api.get(`/products/id/${id}`),
   getFeatured: () => api.get('/products', { params: { featured: true, limit: 8 } }),
   getBestSellers: () => api.get('/products', { params: { bestseller: true, limit: 8 } }),
   getNewArrivals: () => api.get('/products', { params: { new_arrival: true, limit: 8 } }),
