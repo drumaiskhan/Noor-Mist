@@ -1,104 +1,152 @@
-import React, { useEffect, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import React, { useState } from "react";
+import { motion } from "framer-motion";
 import {
+  HiPlus,
+  HiTrash,
   HiX,
-  HiChevronLeft,
-  HiChevronRight,
+  HiUpload,
 } from "react-icons/hi";
 
-import { announcementsAPI } from "../../services/api";
+import {
+  useQuery,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query";
+
+import toast from "react-hot-toast";
+
+import {
+  announcementsAPI,
+  uploadAPI,
+} from "../../services/api";
 
 
-export default function AnnouncementPopup() {
 
-  const [announcements, setAnnouncements] = useState([]);
-  const [current, setCurrent] = useState(0);
-  const [visible, setVisible] = useState(false);
+export default function Announcements() {
 
 
-  useEffect(() => {
+  const queryClient = useQueryClient();
 
-    const closed =
-      sessionStorage.getItem(
-        "noor_mist_announcement_closed"
+
+
+  const emptyForm = {
+
+    title:"",
+    description:"",
+    image_url:"",
+    button_text:"Shop Now",
+    button_link:"/shop",
+    is_active:true,
+    start_date:"",
+    end_date:"",
+
+  };
+
+
+
+  const [showForm,setShowForm] = useState(false);
+
+  const [form,setForm] = useState(emptyForm);
+
+  const [uploading,setUploading] = useState(false);
+
+
+
+
+
+  const {
+    data,
+    isLoading
+  } = useQuery({
+
+    queryKey:["announcements"],
+
+    queryFn:async()=>{
+
+      const res =
+        await announcementsAPI.getAll();
+
+      return res.data;
+
+    }
+
+  });
+
+
+
+  const announcements = data || [];
+
+
+
+
+
+
+  const createMutation = useMutation({
+
+    mutationFn:(data)=>
+      announcementsAPI.create(data),
+
+
+    onSuccess:()=>{
+
+
+      queryClient.invalidateQueries({
+        queryKey:["announcements"]
+      });
+
+
+      toast.success(
+        "Announcement created"
       );
 
 
-    if (closed) return;
+      setForm(emptyForm);
+
+      setShowForm(false);
 
 
-    fetchAnnouncements();
+    },
 
 
-  }, []);
+    onError:(error)=>{
 
+      console.error(error);
 
-
-  const fetchAnnouncements = async()=>{
-
-    try{
-
-      const response =
-        await announcementsAPI.getActive();
-
-
-      console.log(
-        "Announcements:",
-        response.data
-      );
-
-
-      if(
-        Array.isArray(response.data) &&
-        response.data.length > 0
-      ){
-
-        setAnnouncements(response.data);
-
-        setVisible(true);
-
-      }
-
-
-    }catch(error){
-
-      console.error(
-        "Announcement error:",
-        error
+      toast.error(
+        "Failed creating announcement"
       );
 
     }
 
-  };
+  });
 
 
 
 
-  // Auto change slides
-
-  useEffect(()=>{
-
-    if(announcements.length <= 1)
-      return;
 
 
-    const timer=setInterval(()=>{
+  const deleteMutation = useMutation({
 
-      setCurrent(
-        (prev)=>
-          (prev + 1) %
-          announcements.length
+    mutationFn:(id)=>
+      announcementsAPI.delete(id),
+
+
+    onSuccess:()=>{
+
+
+      queryClient.invalidateQueries({
+        queryKey:["announcements"]
+      });
+
+
+      toast.success(
+        "Announcement deleted"
       );
 
 
-    },5000);
+    }
 
-
-
-    return ()=>clearInterval(timer);
-
-
-  },[announcements]);
+  });
 
 
 
@@ -106,16 +154,145 @@ export default function AnnouncementPopup() {
 
 
 
-  const closePopup=()=>{
+  const toggleMutation = useMutation({
+
+    mutationFn:({id,status})=>
+
+      announcementsAPI.update(
+        id,
+        {
+          is_active:status
+        }
+      ),
 
 
-    setVisible(false);
+    onSuccess:()=>{
 
 
-    sessionStorage.setItem(
-      "noor_mist_announcement_closed",
-      "true"
-    );
+      queryClient.invalidateQueries({
+        queryKey:["announcements"]
+      });
+
+
+    }
+
+  });
+
+
+
+
+
+
+
+  const handleChange=(e)=>{
+
+
+    setForm(prev=>({
+
+      ...prev,
+
+      [e.target.name]:
+        e.target.value
+
+    }));
+
+
+  };
+
+
+
+
+
+
+  const handleImageUpload = async(e)=>{
+
+
+    const file =
+      e.target.files[0];
+
+
+    if(!file) return;
+
+
+
+    try{
+
+
+      setUploading(true);
+
+
+
+      const res =
+        await uploadAPI.image(file);
+
+
+
+      console.log(
+        "UPLOAD:",
+        res.data
+      );
+
+
+
+      const imageUrl =
+        res.data.url;
+
+
+
+      if(!imageUrl){
+
+
+        toast.error(
+          "No image URL returned"
+        );
+
+
+        return;
+
+      }
+
+
+
+
+
+      setForm(prev=>({
+
+        ...prev,
+
+        image_url:imageUrl
+
+      }));
+
+
+
+      toast.success(
+        "Image uploaded"
+      );
+
+
+
+    }
+    catch(error){
+
+
+      console.error(
+        error.response?.data || error
+      );
+
+
+      toast.error(
+        "Image upload failed"
+      );
+
+
+    }
+    finally{
+
+
+      setUploading(false);
+
+
+    }
 
 
   };
@@ -125,14 +302,31 @@ export default function AnnouncementPopup() {
 
 
 
+  const handleSubmit=()=>{
 
-  const next=()=>{
+
+    if(!form.title.trim()){
 
 
-    setCurrent(
-      (prev)=>
-      (prev+1)%announcements.length
+      toast.error(
+        "Title required"
+      );
+
+
+      return;
+
+    }
+
+
+
+    console.log(
+      "SEND:",
+      form
     );
+
+
+
+    createMutation.mutate(form);
 
 
   };
@@ -141,161 +335,89 @@ export default function AnnouncementPopup() {
 
 
 
-  const previous=()=>{
+  if(isLoading){
 
+    return (
 
-    setCurrent(
-      (prev)=>
-      (prev-1+announcements.length)
-      % announcements.length
+      <div className="p-6 text-white">
+
+        Loading announcements...
+
+      </div>
+
     );
 
-
-  };
-
-
-
-
-
-  if(
-    !visible ||
-    announcements.length===0
-  )
-  return null;
-
-
-
-
-
-  const announcement =
-    announcements[current];
-
-
-
-  console.log(
-    "Current image:",
-    announcement.image_url
-  );
-
-
-
-
-
-
-
+  }id="4j9vf"
   return (
 
-
-    <AnimatePresence>
-
-
-    {
-      visible && (
+    <div className="p-6 text-white">
 
 
-      <motion.div
+      {/* HEADER */}
 
-
-        initial={{
-          opacity:0
-        }}
-
-
-        animate={{
-          opacity:1
-        }}
-
-
-        exit={{
-          opacity:0
-        }}
-
-
-        className="
-        fixed
-        inset-0
-        z-[9999]
-        bg-black/70
-        backdrop-blur-sm
+      <div className="
         flex
+        justify-between
         items-center
-        justify-center
-        p-5
-        "
+        mb-8
+      ">
 
 
-      >
+        <div>
+
+          <h1 className="
+            text-3xl
+            font-playfair
+            font-bold
+          ">
+
+            Announcements
+
+          </h1>
 
 
+          <p className="
+            text-gray-400
+            mt-2
+          ">
 
-        <motion.div
+            Manage popup offers and promotions
 
-
-          initial={{
-            scale:0.85,
-            y:30
-          }}
-
-
-          animate={{
-            scale:1,
-            y:0
-          }}
+          </p>
 
 
-          exit={{
-            scale:0.85
-          }}
-
-
-          className="
-          relative
-          w-full
-          max-w-xl
-          bg-noir-card
-          rounded-3xl
-          overflow-hidden
-          border
-          border-gold/30
-          shadow-2xl
-          "
-
-
-        >
+        </div>
 
 
 
 
-
-        {/* CLOSE */}
 
         <button
 
-
-          onClick={closePopup}
-
+          onClick={()=>setShowForm(true)}
 
           className="
-          absolute
-          top-4
-          right-4
-          z-20
-          bg-black/70
-          rounded-full
-          p-2
-          text-white
-          hover:text-gold
+            flex
+            items-center
+            gap-2
+            bg-gold
+            text-black
+            px-5
+            py-3
+            rounded-xl
+            font-semibold
           "
-
 
         >
 
-          <HiX size={25}/>
+          <HiPlus/>
 
+          Add Announcement
 
         </button>
 
 
+      </div>
 
 
 
@@ -303,53 +425,515 @@ export default function AnnouncementPopup() {
 
 
 
-        {/* IMAGE */}
 
 
-        {
-          announcement.image_url && (
+      {/* CREATE FORM */}
+
+      {showForm && (
+
+        <motion.div
+
+          initial={{
+            opacity:0,
+            y:-20
+          }}
+
+          animate={{
+            opacity:1,
+            y:0
+          }}
 
 
-          <img
+          className="
+            bg-noir-card
+            border
+            border-gray-800
+            rounded-2xl
+            p-6
+            mb-8
+          "
+
+        >
 
 
-            src={
-              announcement.image_url
-            }
 
 
-            alt={
-              announcement.title
-            }
+          <div className="
+            flex
+            justify-between
+            mb-5
+          ">
 
+
+            <h2 className="
+              text-xl
+              font-bold
+            ">
+
+              New Announcement
+
+            </h2>
+
+
+
+
+            <button
+
+              onClick={()=>setShowForm(false)}
+
+              className="text-gray-400"
+
+            >
+
+              <HiX/>
+
+            </button>
+
+
+          </div>
+
+
+
+
+
+
+
+
+
+          <input
+
+            name="title"
+
+            placeholder="Offer title"
+
+            value={form.title}
+
+            onChange={handleChange}
 
             className="
-            w-full
-            h-72
-            object-cover
+              w-full
+              bg-black
+              border
+              border-gray-700
+              rounded-xl
+              p-3
+              mb-3
             "
-
-
-            onError={(e)=>{
-
-
-              console.error(
-                "Image failed:",
-                announcement.image_url
-              );
-
-
-              e.currentTarget.style.display=
-              "none";
-
-
-            }}
-
 
           />
 
 
-          )
+
+
+
+
+
+
+
+          <textarea
+
+            name="description"
+
+            placeholder="Description"
+
+            value={form.description}
+
+            onChange={handleChange}
+
+            className="
+              w-full
+              bg-black
+              border
+              border-gray-700
+              rounded-xl
+              p-3
+              mb-3
+            "
+
+          />
+
+
+
+
+
+
+
+
+
+          {/* IMAGE UPLOAD */}
+
+
+          <label className="
+            flex
+            items-center
+            gap-3
+            bg-black
+            border
+            border-gray-700
+            rounded-xl
+            p-3
+            cursor-pointer
+            mb-4
+          ">
+
+
+            <HiUpload/>
+
+
+            {
+
+              uploading
+
+              ?
+
+              "Uploading..."
+
+              :
+
+              "Upload Offer Image"
+
+            }
+
+
+
+
+            <input
+
+              type="file"
+
+              accept="image/*"
+
+              hidden
+
+              onChange={handleImageUpload}
+
+            />
+
+
+          </label>
+
+
+
+
+
+
+
+
+
+          {/* IMAGE PREVIEW */}
+
+
+          {
+
+            form.image_url && (
+
+              <img
+
+                src={form.image_url}
+
+                alt="preview"
+
+                className="
+                  w-48
+                  h-48
+                  object-cover
+                  rounded-xl
+                  mb-4
+                "
+
+              />
+
+            )
+
+          }
+
+
+
+
+
+
+
+
+
+          <input
+
+            name="button_text"
+
+            placeholder="Button text"
+
+            value={form.button_text}
+
+            onChange={handleChange}
+
+            className="
+              w-full
+              bg-black
+              border
+              border-gray-700
+              rounded-xl
+              p-3
+              mb-4
+            "
+
+          />
+
+
+
+
+
+
+
+
+
+
+          <input
+
+            name="button_link"
+
+            placeholder="Button link"
+
+            value={form.button_link}
+
+            onChange={handleChange}
+
+            className="
+              w-full
+              bg-black
+              border
+              border-gray-700
+              rounded-xl
+              p-3
+              mb-4
+            "
+
+          />
+
+
+
+
+
+
+
+
+
+          <button
+
+            onClick={handleSubmit}
+
+            className="
+              bg-gold
+              text-black
+              px-6
+              py-3
+              rounded-xl
+              font-bold
+            "
+
+          >
+
+            Save Announcement
+
+          </button>
+
+
+
+
+        </motion.div>
+
+
+      )}      {/* ANNOUNCEMENT LIST */}
+
+      <div className="space-y-5">
+
+
+        {
+          announcements.map((item)=>(
+
+
+            <motion.div
+
+              key={item.id}
+
+              initial={{
+                opacity:0
+              }}
+
+              animate={{
+                opacity:1
+              }}
+
+              className="
+                bg-noir-card
+                border
+                border-gray-800
+                rounded-2xl
+                p-5
+                flex
+                justify-between
+                items-center
+              "
+
+            >
+
+
+
+
+              <div className="
+                flex
+                items-center
+                gap-4
+              ">
+
+
+
+
+                {
+                  item.image_url && (
+
+                    <img
+
+                      src={item.image_url}
+
+                      alt={item.title}
+
+                      className="
+                        w-20
+                        h-20
+                        object-cover
+                        rounded-xl
+                      "
+
+                    />
+
+                  )
+                }
+
+
+
+
+
+
+
+                <div>
+
+
+                  <h3 className="
+                    text-lg
+                    font-bold
+                  ">
+
+                    {item.title}
+
+                  </h3>
+
+
+
+
+
+                  <p className="
+                    text-gray-400
+                  ">
+
+                    {item.description}
+
+                  </p>
+
+
+
+
+
+                  <button
+
+                    onClick={()=>
+
+
+                      toggleMutation.mutate({
+
+                        id:item.id,
+
+                        status:
+                          !item.is_active
+
+                      })
+
+
+                    }
+
+
+                    className="
+                      mt-2
+                      text-sm
+                      text-gold
+                    "
+
+                  >
+
+                    {
+
+                      item.is_active
+
+                      ?
+
+                      "Active ✓"
+
+                      :
+
+                      "Disabled"
+
+                    }
+
+
+                  </button>
+
+
+
+
+                </div>
+
+
+
+              </div>
+
+
+
+
+
+
+
+
+
+              <button
+
+                onClick={()=>
+
+
+                  deleteMutation.mutate(
+                    item.id
+                  )
+
+
+                }
+
+                className="
+                  text-red-400
+                  hover:text-red-300
+                "
+
+              >
+
+                <HiTrash size={24}/>
+
+
+              </button>
+
+
+
+
+
+            </motion.div>
+
+
+          ))
         }
 
 
@@ -359,195 +943,30 @@ export default function AnnouncementPopup() {
 
 
 
-
-        <div className="p-8 text-center">
-
-
-
-          <h2 className="
-          text-3xl
-          font-playfair
-          font-bold
-          text-white
-          mb-4
-          ">
-
-
-            {announcement.title}
-
-
-          </h2>
-
-
-
-
-
-          <p className="
-          text-gray-300
-          mb-6
-          ">
-
-
-            {announcement.description}
-
-
-          </p>
-
-
-
-
-
-
-          {
-            announcement.button_text && (
-
-
-            <a
-
-
-              href={
-                announcement.button_link || "/shop"
-              }
-
-
-              className="
-              inline-block
-              bg-gold
-              text-black
-              px-8
-              py-3
-              rounded-xl
-              font-bold
-              "
-
-
-            >
-
-
-              {
-                announcement.button_text
-              }
-
-
-            </a>
-
-
-            )
-          }
-
-
-
-
-
-
-
-
-
-          {
-            announcements.length > 1 && (
-
+        {
+          announcements.length === 0 && (
 
             <div className="
-            flex
-            items-center
-            justify-between
-            mt-8
+              text-gray-400
+              text-center
+              py-10
             ">
 
-
-
-              <button
-
-                onClick={previous}
-
-                className="
-                p-2
-                rounded-full
-                bg-gold/10
-                text-gold
-                "
-
-              >
-
-                <HiChevronLeft size={25}/>
-
-
-              </button>
-
-
-
-
-
-
-              <span className="
-              text-gray-400
-              ">
-
-
-                {current+1}
-                /
-                {announcements.length}
-
-
-              </span>
-
-
-
-
-
-
-              <button
-
-                onClick={next}
-
-                className="
-                p-2
-                rounded-full
-                bg-gold/10
-                text-gold
-                "
-
-              >
-
-                <HiChevronRight size={25}/>
-
-
-              </button>
-
-
-
+              No announcements yet
 
             </div>
 
-
-            )
-          }
-
+          )
+        }
 
 
 
 
-
-
-        </div>
-
+      </div>
 
 
 
-        </motion.div>
-
-
-
-
-      </motion.div>
-
-
-      )
-    }
-
-
-    </AnimatePresence>
-
+    </div>
 
   );
 
