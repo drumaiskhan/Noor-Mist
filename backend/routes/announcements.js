@@ -5,8 +5,10 @@ const { query } = require('../config/database');
 const { authenticate, requireAdmin } = require('../middleware/auth');
 
 
+
 // ============================================
-// GET ACTIVE ANNOUNCEMENTS (STOREFRONT)
+// PUBLIC
+// GET ACTIVE ANNOUNCEMENTS
 // GET /api/announcements
 // ============================================
 
@@ -19,14 +21,17 @@ router.get('/', async (req, res) => {
       SELECT *
       FROM announcements
       WHERE is_active = true
+
       AND (
         start_date IS NULL
         OR start_date <= NOW()
       )
+
       AND (
         end_date IS NULL
         OR end_date >= NOW()
       )
+
       ORDER BY created_at DESC
       `
     );
@@ -37,11 +42,17 @@ router.get('/', async (req, res) => {
 
   } catch (error) {
 
-    console.error('Get announcements error:', error);
+
+    console.error(
+      'Get announcements error:',
+      error
+    );
+
 
     res.status(500).json({
       message: 'Failed to fetch announcements'
     });
+
 
   }
 
@@ -51,8 +62,11 @@ router.get('/', async (req, res) => {
 
 
 
+
+
 // ============================================
-// ADMIN GET ALL ANNOUNCEMENTS
+// ADMIN
+// GET ALL ANNOUNCEMENTS
 // GET /api/announcements/admin
 // ============================================
 
@@ -60,8 +74,7 @@ router.get(
   '/admin',
   authenticate,
   requireAdmin,
-  async (req,res)=>{
-
+  async (req, res) => {
 
     try {
 
@@ -78,10 +91,13 @@ router.get(
       res.json(result.rows);
 
 
-    } catch(error){
+    } catch(error) {
 
 
-      console.error(error);
+      console.error(
+        'Admin announcements error:',
+        error
+      );
 
 
       res.status(500).json({
@@ -91,8 +107,10 @@ router.get(
 
     }
 
+  }
+);
 
-});
+
 
 
 
@@ -106,88 +124,119 @@ router.get(
 // ============================================
 
 router.post(
-'/',
-authenticate,
-requireAdmin,
-async(req,res)=>{
+  '/',
+  authenticate,
+  requireAdmin,
+  async(req,res)=>{
 
 
-try{
+    try {
 
 
-const {
- title,
- description,
- image_url,
- button_text,
- button_link,
- is_active,
- start_date,
- end_date
-}=req.body;
+      const {
+
+        title,
+        description,
+        image_url,
+        button_text,
+        button_link,
+        is_active,
+        start_date,
+        end_date
+
+      } = req.body;
 
 
 
-const result = await query(
 
-`
-INSERT INTO announcements
-(
- title,
- description,
- image_url,
- button_text,
- button_link,
- is_active,
- start_date,
- end_date
-)
+      if(!title){
 
-VALUES
-($1,$2,$3,$4,$5,$6,$7,$8)
+        return res.status(400).json({
 
-RETURNING *
-`,
+          message:'Title is required'
 
-[
- title,
- description,
- image_url,
- button_text,
- button_link,
- is_active ?? true,
- start_date || null,
- end_date || null
-]
+        });
 
+      }
+
+
+
+
+
+      const result = await query(
+
+        `
+        INSERT INTO announcements
+        (
+          title,
+          description,
+          image_url,
+          button_text,
+          button_link,
+          is_active,
+          start_date,
+          end_date
+        )
+
+        VALUES
+        ($1,$2,$3,$4,$5,$6,$7,$8)
+
+        RETURNING *
+
+        `,
+
+
+        [
+
+          title,
+
+          description || '',
+
+          image_url || null,
+
+          button_text || 'Shop Now',
+
+          button_link || '/shop',
+
+          is_active ?? true,
+
+          start_date || null,
+
+          end_date || null
+
+        ]
+
+      );
+
+
+
+      res.status(201).json(
+        result.rows[0]
+      );
+
+
+
+    } catch(error) {
+
+
+      console.error(
+        'Create announcement error:',
+        error
+      );
+
+
+      res.status(500).json({
+
+        message:'Failed to create announcement'
+
+      });
+
+
+    }
+
+
+  }
 );
-
-
-
-res.status(201).json(result.rows[0]);
-
-
-
-}
-
-catch(error){
-
-console.error(
-'Create announcement error:',
-error
-);
-
-
-res.status(500).json({
-message:'Failed to create announcement'
-});
-
-
-}
-
-
-
-});
 
 
 
@@ -202,107 +251,133 @@ message:'Failed to create announcement'
 // PUT /api/announcements/:id
 // ============================================
 
-
 router.put(
-'/:id',
-authenticate,
-requireAdmin,
-async(req,res)=>{
+  '/:id',
+  authenticate,
+  requireAdmin,
+  async(req,res)=>{
 
 
-try{
+    try {
 
 
-const {id}=req.params;
+      const {
+
+        title,
+        description,
+        image_url,
+        button_text,
+        button_link,
+        is_active,
+        start_date,
+        end_date
+
+      } = req.body;
 
 
-const {
- title,
- description,
- image_url,
- button_text,
- button_link,
- is_active,
- start_date,
- end_date
-
-}=req.body;
 
 
+      const result = await query(
 
-const result = await query(
+        `
+        UPDATE announcements
 
-`
-UPDATE announcements
+        SET
 
-SET
+        title = COALESCE($1,title),
 
-title=$1,
-description=$2,
-image_url=$3,
-button_text=$4,
-button_link=$5,
-is_active=$6,
-start_date=$7,
-end_date=$8
+        description = COALESCE($2,description),
 
-WHERE id=$9
+        image_url = COALESCE($3,image_url),
 
-RETURNING *
+        button_text = COALESCE($4,button_text),
 
-`,
+        button_link = COALESCE($5,button_link),
 
-[
- title,
- description,
- image_url,
- button_text,
- button_link,
- is_active,
- start_date || null,
- end_date || null,
- id
-]
+        is_active = COALESCE($6,is_active),
+
+        start_date = COALESCE($7,start_date),
+
+        end_date = COALESCE($8,end_date)
 
 
+        WHERE id=$9
+
+
+        RETURNING *
+
+        `,
+
+
+        [
+
+          title,
+
+          description,
+
+          image_url,
+
+          button_text,
+
+          button_link,
+
+          is_active,
+
+          start_date || null,
+
+          end_date || null,
+
+          req.params.id
+
+        ]
+
+      );
+
+
+
+
+
+      if(result.rows.length === 0){
+
+        return res.status(404).json({
+
+          message:'Announcement not found'
+
+        });
+
+      }
+
+
+
+
+
+      res.json(
+        result.rows[0]
+      );
+
+
+
+    } catch(error){
+
+
+      console.error(
+        'Update announcement error:',
+        error
+      );
+
+
+      res.status(500).json({
+
+        message:'Failed to update announcement'
+
+      });
+
+
+    }
+
+
+  }
 );
-
-
-
-if(result.rows.length===0){
-
-return res.status(404).json({
-message:'Announcement not found'
-});
-
-}
-
-
-
-res.json(result.rows[0]);
-
-
-
-}
-
-catch(error){
-
-
-console.error(
-'Update announcement error:',
-error
-);
-
-
-res.status(500).json({
-message:'Failed to update announcement'
-});
-
-
-}
-
-
-});
 
 
 
@@ -317,75 +392,85 @@ message:'Failed to update announcement'
 // DELETE /api/announcements/:id
 // ============================================
 
-
 router.delete(
-'/:id',
-authenticate,
-requireAdmin,
-async(req,res)=>{
+  '/:id',
+  authenticate,
+  requireAdmin,
+  async(req,res)=>{
 
 
-try{
+    try {
 
 
-const {id}=req.params;
+      const result = await query(
+
+        `
+        DELETE FROM announcements
+
+        WHERE id=$1
+
+        RETURNING *
+
+        `,
+
+        [
+          req.params.id
+        ]
+
+      );
 
 
 
-const result = await query(
 
-`
-DELETE FROM announcements
-WHERE id=$1
-RETURNING *
-`,
 
-[id]
+      if(result.rows.length === 0){
 
+        return res.status(404).json({
+
+          message:'Announcement not found'
+
+        });
+
+      }
+
+
+
+
+      res.json({
+
+        message:'Announcement deleted'
+
+      });
+
+
+
+    } catch(error){
+
+
+      console.error(
+
+        'Delete announcement error:',
+
+        error
+
+      );
+
+
+
+      res.status(500).json({
+
+        message:'Failed to delete announcement'
+
+      });
+
+
+    }
+
+
+  }
 );
 
 
-
-if(result.rows.length===0){
-
-return res.status(404).json({
-message:'Announcement not found'
-});
-
-}
-
-
-
-res.json({
-
-message:'Announcement deleted'
-
-});
-
-
-
-}
-
-
-catch(error){
-
-
-console.error(
-'Delete announcement error:',
-error
-);
-
-
-res.status(500).json({
-message:'Failed to delete announcement'
-});
-
-
-}
-
-
-
-});
 
 
 
