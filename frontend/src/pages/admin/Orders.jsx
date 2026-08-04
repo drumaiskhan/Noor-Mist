@@ -178,12 +178,10 @@ export default function Orders() {
 
   const updateStatusMutation = useMutation({
     mutationFn: ({ id, status }) => orderAPI.updateStatus(id, status),
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries(['adminOrders']);
       toast.success('Order status updated successfully');
-      if (selectedOrder) {
-        setSelectedOrder(prev => ({ ...prev, status: statusFilter }));
-      }
+      setSelectedOrder(prev => (prev ? { ...prev, status: variables.status } : prev));
     },
     onError: (err) => toast.error(err.response?.data?.error || 'Failed to update status'),
   });
@@ -208,12 +206,14 @@ export default function Orders() {
   const totalPages = data?.data?.pages || 1;
   const totalOrders = data?.data?.total || 0;
 
-  // Calculate collection counts
+  // Calculate collection counts (per-status counts come from the current
+  // page of orders; 'all' uses the server-reported total so it isn't
+  // double-counted against the per-order increments below)
   const collectionCounts = orders.reduce((acc, order) => {
     acc[order.status] = (acc[order.status] || 0) + 1;
-    acc.all = (acc.all || 0) + 1;
     return acc;
-  }, { all: totalOrders });
+  }, {});
+  collectionCounts.all = totalOrders;
 
   const handleStatusChange = (orderId, newStatus) => {
     updateStatusMutation.mutate({ id: orderId, status: newStatus });
@@ -323,7 +323,7 @@ export default function Orders() {
                     </span>
                   </div>
                   <span className="text-gold font-bold text-lg">
-                    {formatPrice(order.total)}
+                    {formatPrice(order.total_amount)}
                   </span>
                 </div>
 
@@ -334,7 +334,7 @@ export default function Orders() {
                   </div>
                   <div className="flex items-center gap-2 text-gray-400">
                     <HiCube className="w-4 h-4 text-gray-500" />
-                    <span>{order.item_count || 0} items</span>
+                    <span>{order.items?.length || 0} items</span>
                   </div>
                   <div className="flex items-center gap-2 text-gray-400">
                     <HiClock className="w-4 h-4 text-gray-500" />
@@ -534,7 +534,7 @@ export default function Orders() {
                           </p>
                         </div>
                         <p className="text-gold text-sm font-bold">
-                          {formatPrice(item.total_price || item.unit_price * item.quantity)}
+                          {formatPrice(item.subtotal ?? (item.price || 0) * item.quantity)}
                         </p>
                       </div>
                     ))}
@@ -553,17 +553,17 @@ export default function Orders() {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-400">Shipping</span>
-                      <span className="text-white">{formatPrice(selectedOrder.shipping_cost || 0)}</span>
+                      <span className="text-white">{formatPrice(selectedOrder.shipping_amount || 0)}</span>
                     </div>
-                    {selectedOrder.discount > 0 && (
+                    {selectedOrder.discount_amount > 0 && (
                       <div className="flex justify-between">
                         <span className="text-gray-400">Discount</span>
-                        <span className="text-green-400">-{formatPrice(selectedOrder.discount)}</span>
+                        <span className="text-green-400">-{formatPrice(selectedOrder.discount_amount)}</span>
                       </div>
                     )}
                     <div className="flex justify-between pt-3 border-t border-gray-800">
                       <span className="text-white font-bold">Total</span>
-                      <span className="text-gold font-bold text-lg">{formatPrice(selectedOrder.total)}</span>
+                      <span className="text-gold font-bold text-lg">{formatPrice(selectedOrder.total_amount)}</span>
                     </div>
                     <div className="flex justify-between text-xs">
                       <span className="text-gray-500">Payment Method</span>

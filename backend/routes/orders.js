@@ -184,6 +184,7 @@ router.put('/:id/status', requireAdmin, async (req, res) => {
     if (!result.rows.length) return res.status(404).json({ error: 'Order not found' });
     res.json({ order: result.rows[0] });
   } catch (error) {
+    console.error('Failed to update order status:', error);
     res.status(500).json({ error: 'Failed to update order status' });
   }
 });
