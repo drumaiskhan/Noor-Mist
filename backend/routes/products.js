@@ -58,30 +58,144 @@ router.get('/', optionalAuth, async (req, res) => {
       `SELECT COUNT(*) FROM products p ${where}`,
       values
     );
+
     const total = parseInt(countResult.rows[0].count);
 
+
     const result = await query(
-      `SELECT p.*,
-        (SELECT json_agg(pi ORDER BY pi.position) FROM product_images pi WHERE pi.product_id = p.id) AS images,
-        (SELECT json_agg(pv ORDER BY pv.size_ml) FROM product_variants pv WHERE pv.product_id = p.id AND pv.is_active = true) AS variants,
-        (SELECT json_agg(pi) FROM product_images pi WHERE pi.product_id = p.id AND pi.is_primary = true LIMIT 1) AS primary_image
-       FROM products p
-       ${where}
-       ORDER BY ${orderBy}
-       LIMIT $${idx} OFFSET $${idx + 1}`,
-      [...values, limit, offset]
+`
+SELECT
+
+    p.*,
+
+    c.name AS category_name,
+    c.slug AS category_slug,
+
+
+    -- Lowest product price from variants
+    COALESCE(
+        (
+            SELECT MIN(COALESCE(pv.sale_price,pv.price))
+            FROM product_variants pv
+            WHERE pv.product_id = p.id
+            AND pv.is_active = true
+        ),
+        0
+    ) AS price,
+
+
+    -- Total available stock
+    COALESCE(
+        (
+            SELECT SUM(pv.quantity)
+            FROM product_variants pv
+            WHERE pv.product_id = p.id
+            AND pv.is_active = true
+        ),
+        0
+    ) AS stock,
+
+
+    -- Sales count
+    COALESCE(
+        p.total_sold,
+        0
+    ) AS sales,
+
+
+    -- Rating
+    COALESCE(
+        p.average_rating,
+        0
+    ) AS rating,
+
+
+    -- Variant count
+    (
+        SELECT COUNT(*)
+        FROM product_variants pv
+        WHERE pv.product_id = p.id
+        AND pv.is_active = true
+    ) AS variant_count,
+
+
+    -- Images
+    (
+        SELECT json_agg(pi ORDER BY pi.position)
+        FROM product_images pi
+        WHERE pi.product_id = p.id
+    ) AS images,
+
+
+    -- Variants
+    (
+        SELECT json_agg(pv ORDER BY pv.size_ml)
+        FROM product_variants pv
+        WHERE pv.product_id = p.id
+        AND pv.is_active = true
+    ) AS variants,
+
+
+    -- Main image
+    (
+        SELECT json_agg(pi)
+        FROM product_images pi
+        WHERE pi.product_id = p.id
+        AND pi.is_primary = true
+        LIMIT 1
+    ) AS primary_image
+
+
+FROM products p
+
+
+LEFT JOIN categories c
+ON c.id = p.category_id
+
+
+${where}
+
+
+ORDER BY ${orderBy}
+
+
+LIMIT $${idx}
+OFFSET $${idx + 1}
+
+`,
+      [
+        ...values,
+        limit,
+        offset
+      ]
     );
 
+
     res.json({
+
       products: result.rows,
+
       total,
+
       page,
+
       pages: Math.ceil(total / limit),
-      limit,
+
+      limit
+
     });
+
+
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Failed to fetch products' });
+
+    console.error("PRODUCT FETCH ERROR:", error);
+
+    res.status(500).json({
+
+      error: "Failed to fetch products"
+
+    });
+
   }
 });
 
