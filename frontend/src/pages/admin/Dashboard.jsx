@@ -5,6 +5,9 @@ import { useQuery } from '@tanstack/react-query';
 import { analyticsAPI } from '../../services/api';
 import { HiCurrencyDollar, HiShoppingBag, HiUsers, HiCube, HiTrendingUp } from 'react-icons/hi';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { formatPrice, formatDate } from '../../utils/helpers';
+
+const dayLabel = (dateStr) => new Date(dateStr).toLocaleDateString('en-US', { weekday: 'short' });
 
 const StatCard = ({ title, value, icon: Icon, change, color, to }) => (
   <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
@@ -45,12 +48,14 @@ export default function Dashboard() {
     conversionRate: '0%',
   };
 
-  const salesData = [
-    { name: 'Mon', sales: 4000 }, { name: 'Tue', sales: 3000 },
-    { name: 'Wed', sales: 5000 }, { name: 'Thu', sales: 4500 },
-    { name: 'Fri', sales: 6000 }, { name: 'Sat', sales: 7000 },
-    { name: 'Sun', sales: 5500 },
-  ];
+  // Real last-7-days sales, straight from the DB (backend already groups
+  // orders by day) — previously this chart rendered a hardcoded fake array.
+  const salesData = (data?.salesData || []).map((d) => ({
+    name: dayLabel(d.date),
+    sales: parseFloat(d.revenue) || 0,
+  }));
+
+  const recentOrders = data?.recentOrders || [];
 
   return (
     <div className="space-y-8">
@@ -60,9 +65,9 @@ export default function Dashboard() {
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard title="Total Revenue" value={stats.revenue} icon={HiCurrencyDollar} change={12} color="bg-green-500/20" to="/admin/analytics" />
-        <StatCard title="Orders" value={stats.orders} icon={HiShoppingBag} change={8} color="bg-blue-500/20" to="/admin/orders" />
-        <StatCard title="Customers" value={stats.customers} icon={HiUsers} change={15} color="bg-purple-500/20" to="/admin/customers" />
+        <StatCard title="Total Revenue" value={stats.revenue} icon={HiCurrencyDollar} color="bg-green-500/20" to="/admin/analytics" />
+        <StatCard title="Orders" value={stats.orders} icon={HiShoppingBag} color="bg-blue-500/20" to="/admin/orders" />
+        <StatCard title="Customers" value={stats.customers} icon={HiUsers} color="bg-purple-500/20" to="/admin/customers" />
         <StatCard title="Products" value={stats.products} icon={HiCube} color="bg-gold/20" to="/admin/products" />
       </div>
 
@@ -83,15 +88,40 @@ export default function Dashboard() {
         <div className="luxury-card p-6">
           <h3 className="text-lg font-playfair font-bold mb-6">Recent Orders</h3>
           <div className="space-y-4">
-            {[...Array(5)].map((_, i) => (
-              <div key={i} className="flex items-center justify-between py-3 border-b border-gray-800 last:border-0">
-                <div>
-                  <p className="text-white text-sm font-medium">Order #NM-{1000 + i}</p>
-                  <p className="text-gray-400 text-xs">2 items • ₨{(Math.random() * 10000 + 3000).toFixed(0)}</p>
+            {isLoading ? (
+              [...Array(5)].map((_, i) => (
+                <div key={i} className="flex items-center justify-between py-3 border-b border-gray-800 last:border-0">
+                  <div className="skeleton h-4 w-32 rounded" />
+                  <div className="skeleton h-5 w-20 rounded-full" />
                 </div>
-                <span className="text-xs px-3 py-1 rounded-full bg-green-500/10 text-green-400">Completed</span>
-              </div>
-            ))}
+              ))
+            ) : recentOrders.length === 0 ? (
+              <p className="text-gray-400 text-sm text-center py-6">No orders yet</p>
+            ) : (
+              recentOrders.map((order) => (
+                <Link
+                  key={order.id}
+                  to="/admin/orders"
+                  className="flex items-center justify-between py-3 border-b border-gray-800 last:border-0 hover:opacity-80 transition-opacity"
+                >
+                  <div>
+                    <p className="text-white text-sm font-medium">
+                      {order.first_name ? `${order.first_name} ${order.last_name || ''}`.trim() : 'Guest Customer'}
+                    </p>
+                    <p className="text-gray-400 text-xs">
+                      {formatPrice(order.total_amount)} • {formatDate(order.created_at)}
+                    </p>
+                  </div>
+                  <span className={`text-xs px-3 py-1 rounded-full capitalize ${
+                    order.status === 'delivered' ? 'bg-green-500/10 text-green-400'
+                    : order.status === 'cancelled' ? 'bg-red-500/10 text-red-400'
+                    : 'bg-yellow-500/10 text-yellow-400'
+                  }`}>
+                    {order.status}
+                  </span>
+                </Link>
+              ))
+            )}
           </div>
         </div>
       </div>

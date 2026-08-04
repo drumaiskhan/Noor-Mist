@@ -60,7 +60,7 @@ export default function ProductForm() {
   const { data: productData, isLoading: isLoadingProduct } = useQuery({
     queryKey: ['adminProduct', id],
     queryFn: async () => {
-      const { data } = await productAPI.getOne(id);
+      const { data } = await productAPI.getOneAdmin(id);
       return data;
     },
     enabled: isEditing,
@@ -160,7 +160,9 @@ export default function ProductForm() {
     setImageFiles(files);
     try {
       const { data } = await uploadAPI.images(files);
-      setImages([...images, ...data]);
+      // Backend responds with { images: [...] } — spreading `data` itself
+      // (an object, not an array) used to throw and silently fail the upload.
+      setImages([...images, ...(data.images || [])]);
       toast.success('Images uploaded');
     } catch {
       toast.error('Upload failed');
@@ -183,6 +185,9 @@ export default function ProductForm() {
         sale_price: v.sale_price ? parseFloat(v.sale_price) : null,
         quantity: parseInt(v.quantity) || 0,
       })),
+      images: images.map((img) => (
+        typeof img === 'string' ? { url: img } : { url: img.url, public_id: img.public_id }
+      )),
     });
   };
 

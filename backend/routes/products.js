@@ -263,6 +263,27 @@ router.post('/import-xml', requireAdmin, async (req, res) => {
   }
 });
 
+// GET /api/products/id/:id (admin — fetch by numeric id, used by the edit
+// screen. Unlike the public /:slug route below, this does NOT require
+// is_visible=true, so draft/archived products can still be opened for editing.)
+router.get('/id/:id', requireAdmin, async (req, res) => {
+  try {
+    const result = await query(
+      `SELECT p.*,
+        (SELECT json_agg(pi ORDER BY pi.position) FROM product_images pi WHERE pi.product_id = p.id) AS images,
+        (SELECT json_agg(pv ORDER BY pv.size_ml) FROM product_variants pv WHERE pv.product_id = p.id) AS variants
+       FROM products p
+       WHERE p.id = $1`,
+      [req.params.id]
+    );
+    if (!result.rows.length) return res.status(404).json({ error: 'Product not found' });
+    res.json({ product: result.rows[0] });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to fetch product' });
+  }
+});
+
 // GET /api/products/:slug
 router.get('/:slug', optionalAuth, async (req, res) => {
   try {
@@ -300,6 +321,70 @@ router.get('/:slug', optionalAuth, async (req, res) => {
   }
 });
 
+// Insert/sync the variants + images the admin form submits alongside a
+// product. The form always sends the *full* current lists, so:
+//  - a variant row with an `id` is an existing row → UPDATE it
+//  - a variant row with no `id` is new → INSERT it
+//  - any existing variant not present in the submitted list was removed
+//    in the form → soft-delete it (is_active=false) rather than a hard
+//    delete, since past orders may still reference it
+//  - images are simpler: the whole set is replaced, first one is primary
+async function syncVariants(productId, variants, slug) {
+  const submittedIds = [];
+  for (const v of variants || []) {
+    const sizeMl = parseInt(v.size_ml) || 0;
+    const price = parseFloat(v.price) || 0;
+    if (!sizeMl || !price) continue; // skip incomplete rows rather than fail the whole save
+    const salePrice = v.sale_price ? parseFloat(v.sale_price) : null;
+    const quantity = parseInt(v.quantity) || 0;
+    const sku = (v.sku && v.sku.trim()) || `${(slug || 'NM').toUpperCase().slice(0, 8)}-${sizeMl}ML-${Date.now()}`;
+
+    if (v.id) {
+      const updated = await query(
+        `UPDATE product_variants SET size_ml=$1, price=$2, sale_price=$3, sku=$4, quantity=$5,
+          is_active=true, updated_at=NOW()
+         WHERE id=$6 AND product_id=$7 RETURNING id`,
+        [sizeMl, price, salePrice, sku, quantity, v.id, productId]
+      );
+      if (updated.rows.length) submittedIds.push(updated.rows[0].id);
+    } else {
+      const inserted = await query(
+        `INSERT INTO product_variants (product_id, size_ml, price, sale_price, sku, quantity)
+         VALUES ($1,$2,$3,$4,$5,$6)
+         ON CONFLICT (sku) DO UPDATE SET size_ml=EXCLUDED.size_ml, price=EXCLUDED.price,
+           sale_price=EXCLUDED.sale_price, quantity=EXCLUDED.quantity, is_active=true
+         RETURNING id`,
+        [productId, sizeMl, price, salePrice, sku, quantity]
+      );
+      submittedIds.push(inserted.rows[0].id);
+    }
+  }
+
+  if (submittedIds.length) {
+    await query(
+      `UPDATE product_variants SET is_active=false WHERE product_id=$1 AND id != ALL($2::int[])`,
+      [productId, submittedIds]
+    );
+  }
+}
+
+async function syncImages(productId, images) {
+  if (!images) return; // undefined = form didn't touch images, leave as-is
+  await query('DELETE FROM product_images WHERE product_id=$1', [productId]);
+  let position = 0;
+  for (const img of images) {
+    const url = typeof img === 'string' ? img : img.url;
+    if (!url) continue;
+    const publicId = typeof img === 'string' ? null : img.public_id || null;
+    await query(
+      `INSERT INTO product_images (product_id, url, public_id, is_primary, position)
+       VALUES ($1,$2,$3,$4,$5)`,
+      [productId, url, publicId, position === 0, position]
+    );
+    position += 1;
+  }
+}
+
 // POST /api/products (admin)
 router.post('/', requireAdmin, async (req, res) => {
   try {
@@ -308,6 +393,7 @@ router.post('/', requireAdmin, async (req, res) => {
       gender, top_notes, middle_notes, base_notes, longevity, projection, season, occasion,
       category_id, collection_id, is_featured, is_bestseller, is_new_arrival,
       is_limited_edition, is_gift_set, is_visible, meta_title, meta_description,
+      variants, images,
     } = req.body;
 
     let slug = slugify(name, { lower: true, strict: true });
@@ -329,7 +415,11 @@ router.post('/', requireAdmin, async (req, res) => {
        meta_title, meta_description]
     );
 
-    res.status(201).json({ product: result.rows[0] });
+    const product = result.rows[0];
+    await syncVariants(product.id, variants, slug);
+    await syncImages(product.id, images);
+
+    res.status(201).json({ product });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Failed to create product' });
@@ -344,6 +434,7 @@ router.put('/:id', requireAdmin, async (req, res) => {
       gender, top_notes, middle_notes, base_notes, longevity, projection, season, occasion,
       category_id, collection_id, is_featured, is_bestseller, is_new_arrival,
       is_limited_edition, is_gift_set, is_visible, meta_title, meta_description,
+      variants, images,
     } = req.body;
 
     const result = await query(
@@ -363,7 +454,12 @@ router.put('/:id', requireAdmin, async (req, res) => {
     );
 
     if (!result.rows.length) return res.status(404).json({ error: 'Product not found' });
-    res.json({ product: result.rows[0] });
+    const product = result.rows[0];
+
+    await syncVariants(product.id, variants, product.slug);
+    await syncImages(product.id, images);
+
+    res.json({ product });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Failed to update product' });

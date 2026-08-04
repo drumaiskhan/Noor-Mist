@@ -57,6 +57,9 @@ export const authAPI = {
 export const productAPI = {
   getAll: (params) => api.get('/products', { params }),
   getOne: (slug) => api.get(`/products/${slug}`),
+  // Admin edit screens link by numeric id, not slug, and need to be able to
+  // load drafts/archived products too — use the dedicated admin endpoint.
+  getOneAdmin: (id) => api.get(`/products/id/${id}`),
   getFeatured: () => api.get('/products', { params: { featured: true, limit: 8 } }),
   getBestSellers: () => api.get('/products', { params: { bestseller: true, limit: 8 } }),
   getNewArrivals: () => api.get('/products', { params: { new_arrival: true, limit: 8 } }),
