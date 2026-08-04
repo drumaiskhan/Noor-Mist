@@ -171,21 +171,13 @@ router.put('/:id/status', requireAdmin, async (req, res) => {
 
   try {
 
-    console.log("===== ORDER STATUS UPDATE START =====");
-
-    console.log("ADMIN USER:");
-    console.log(req.user);
-
-    console.log("ORDER ID:");
-    console.log(req.params.id);
-
-    console.log("REQUEST BODY:");
-    console.log(req.body);
-
+    console.log("===== ORDER STATUS UPDATE =====");
+    console.log("USER:", req.user);
+    console.log("ORDER ID:", req.params.id);
+    console.log("BODY:", req.body);
 
 
     const { status, tracking_number } = req.body;
-
 
 
     const validStatuses = [
@@ -200,15 +192,11 @@ router.put('/:id/status', requireAdmin, async (req, res) => {
     ];
 
 
-
     if (!status) {
-
       return res.status(400).json({
         error: "Status is required"
       });
-
     }
-
 
 
     if (!validStatuses.includes(status)) {
@@ -223,62 +211,38 @@ router.put('/:id/status', requireAdmin, async (req, res) => {
 
 
 
-    const orderCheck = await query(
-      `
-      SELECT id, status
-      FROM orders
-      WHERE id=$1
-      `,
-      [
-        req.params.id
-      ]
-    );
-
-
-
-    if (!orderCheck.rows.length) {
-
-      return res.status(404).json({
-        error:"Order does not exist"
-      });
-
-    }
-
-
-
-
     const result = await query(
       `
       UPDATE orders
 
       SET
 
-      status=$1,
+      status = $1::text,
 
-      tracking_number=
-      COALESCE($2, tracking_number),
+      tracking_number =
+      COALESCE($2::text, tracking_number),
 
 
-      shipped_at=
+      shipped_at =
       CASE
-        WHEN $1='shipped'
+        WHEN $1::text = 'shipped'
         THEN NOW()
         ELSE shipped_at
       END,
 
 
-      delivered_at=
+      delivered_at =
       CASE
-        WHEN $1='delivered'
+        WHEN $1::text = 'delivered'
         THEN NOW()
         ELSE delivered_at
       END,
 
 
-      updated_at=NOW()
+      updated_at = NOW()
 
 
-      WHERE id=$3
+      WHERE id = $3::integer
 
 
       RETURNING *
@@ -292,33 +256,39 @@ router.put('/:id/status', requireAdmin, async (req, res) => {
 
 
 
+    if (!result.rows.length) {
 
-    console.log("UPDATED ORDER:");
-    console.log(result.rows[0]);
+      return res.status(404).json({
+        error: "Order not found"
+      });
+
+    }
+
+
+
+    console.log("UPDATED ORDER:", result.rows[0]);
 
 
 
     res.status(200).json({
 
-      success:true,
+      success: true,
 
-      message:"Order status updated successfully",
+      message: "Order status updated successfully",
 
-      order:result.rows[0]
+      order: result.rows[0]
 
     });
 
 
 
-  } catch(error) {
+  } catch (error) {
 
 
     console.error(
-      "ORDER STATUS UPDATE ERROR:"
+      "ORDER STATUS UPDATE ERROR:",
+      error
     );
-
-    console.error(error);
-
 
 
     res.status(500).json({
