@@ -91,6 +91,33 @@ export const collectionsAPI = {
   delete: (id) => api.delete(`/collections/${id}`),
 };
 
+
+// Announcements API ⭐
+export const announcementsAPI = {
+
+  // Storefront popup announcements
+  getActive: () => api.get('/announcements'),
+
+
+  // Admin announcement management
+  getAll: () => api.get('/announcements/admin'),
+
+
+  // Create new announcement
+  create: (data) => api.post('/announcements', data),
+
+
+  // Update announcement
+  update: (id, data) =>
+    api.put(`/announcements/${id}`, data),
+
+
+  // Delete announcement
+  delete: (id) =>
+    api.delete(`/announcements/${id}`),
+
+};
+
 // Cart API
 export const cartAPI = {
   get: () => api.get('/orders/cart'),
