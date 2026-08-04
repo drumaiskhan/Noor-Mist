@@ -1,0 +1,511 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,700&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,600&family=Montserrat:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --gold: #D4AF37;
+  --gold-light: #FFD700;
+  --gold-dark: #B8960C;
+  --gold-pale: #F5E6CC;
+  --noir: #0A0A0A;
+  --noir-light: #1A1A1A;
+  --noir-card: #141414;
+  --noir-surface: #1E1E1E;
+  --noir-soft: #2A2A2A;
+  --ivory: #FFFFF0;
+  --ivory-light: #FFFFF7;
+  --ivory-dark: #F5F5DC;
+  --champagne: #F7E7CE;
+  --champagne-dark: #E8D5B7;
+  --brown-warm: #8B6914;
+  --brown-deep: #5C4033;
+  --brown-rich: #3E2723;
+  --border: #2A2A2A;
+  --text-primary: #FFFFFF;
+  --text-secondary: #9CA3AF;
+  --white: #FFFFFF;
+  --gray-50: #FAFAFA;
+  --gray-100: #F5F5F5;
+  --gray-200: #E5E5E5;
+  --gray-300: #D4D4D4;
+  --gray-400: #9CA3AF;
+  --gray-500: #6B7280;
+  --gray-600: #4B5563;
+  --gray-700: #374151;
+  --gray-800: #1F2937;
+  --gray-900: #111827;
+  --success: #10B981;
+  --warning: #F59E0B;
+  --error: #EF4444;
+  --info: #3B82F6;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.3);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.4);
+  --shadow-lg: 0 10px 30px rgba(0,0,0,0.5);
+  --shadow-gold: 0 0 20px rgba(212, 175, 55, 0.15);
+  --font-heading: 'Playfair Display', serif;
+  --font-body: 'Cormorant Garamond', serif;
+  --font-ui: 'Inter', sans-serif;
+  --font-button: 'Montserrat', sans-serif;
+  --body-font-size: 17px;
+  --line-height: 1.7;
+  --letter-spacing: 0px;
+  --heading-weight: 700;
+  --site-max-width: 1280px;
+  --shadow-theme: 0 10px 30px rgba(0,0,0,0.35);
+  --btn-bg: linear-gradient(135deg, #D4AF37 0%, #B8960C 100%);
+  --btn-border: none;
+  --btn-backdrop: none;
+  --btn-fg: #0A0A0A;
+  --btn-color: #D4AF37;
+  --btn-hover-color: #FFD700;
+  --btn-text-color: #0A0A0A;
+  --btn-padding: 14px 36px;
+  --btn-font-size: 14px;
+  --btn-hover-transform: translateY(-2px);
+  --btn-hover-shadow: 0 10px 30px rgba(212, 175, 55, 0.3);
+  --gradient-start: #D4AF37;
+  --gradient-end: #B8960C;
+  --gold-rgb: 212, 175, 55;
+  --announcement-bg: #D4AF37;
+  --announcement-text: #0A0A0A;
+  --footer-bg: #1A1A1A;
+  --footer-text: #9CA3AF;
+  --section-spacing: 80px;
+  --blur-intensity: 12px;
+  --card-bg: var(--noir-card);
+  --card-border: 1px solid rgba(212, 175, 55, 0.08);
+  --card-shadow: var(--shadow-theme);
+  --card-backdrop: none;
+  --card-hover-transform: translateY(-6px);
+  --card-hover-shadow: 0 20px 40px rgba(0,0,0,0.4);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  background-color: var(--noir);
+  color: var(--white);
+  font-family: var(--font-body);
+  font-size: var(--body-font-size);
+  line-height: var(--line-height);
+  letter-spacing: var(--letter-spacing);
+  overflow-x: hidden;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  font-weight: var(--heading-weight);
+  line-height: 1.2;
+}
+
+/* Retroactively makes every existing max-w-7xl container (14 pages use it)
+   follow the admin's chosen site width — no per-page changes needed. */
+.max-w-7xl {
+  max-width: var(--site-max-width, 80rem) !important;
+}
+
+/* Opt-in utility for the admin-controlled shadow style */
+.shadow-theme {
+  box-shadow: var(--shadow-theme);
+}
+
+/* Retroactively makes every homepage section (`py-16 md:py-24`) follow the
+   admin's chosen section spacing — no per-component changes needed. */
+section.py-16.md\:py-24 {
+  padding-top: var(--section-spacing) !important;
+  padding-bottom: var(--section-spacing) !important;
+}
+.section-theme {
+  padding-top: var(--section-spacing);
+  padding-bottom: var(--section-spacing);
+}
+
+/* Admin "shadows" toggle — flattens every themed shadow to none */
+.shadows-disabled .shadow-theme,
+.shadows-disabled .luxury-card,
+.shadows-disabled .luxury-card:hover,
+.shadows-disabled .theme-card {
+  box-shadow: none !important;
+}
+
+/* Admin "animations" toggle — belt-and-suspenders alongside --animation-duration */
+.animations-disabled *,
+.animations-disabled *::before,
+.animations-disabled *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+}
+
+/* Generic themed card utility for anything that isn't the product .luxury-card */
+.theme-card {
+  background: var(--card-bg);
+  border: var(--card-border);
+  box-shadow: var(--card-shadow);
+  backdrop-filter: var(--card-backdrop);
+  -webkit-backdrop-filter: var(--card-backdrop);
+  border-radius: var(--radius-md);
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.theme-card:hover {
+  transform: var(--card-hover-transform);
+  box-shadow: var(--card-hover-shadow);
+}
+
+/* Product card design variants — set by the admin's "Product Card Style" option */
+[data-product-card="minimal"] .product-card-meta,
+[data-product-card="minimal"] .product-card-rating {
+  display: none;
+}
+[data-product-card="overlay"] .product-card-info {
+  position: absolute;
+  inset: auto 0 0 0;
+  background: linear-gradient(0deg, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0) 100%);
+}
+
+.bg-announcement {
+  background-color: var(--announcement-bg);
+  color: var(--announcement-text);
+}
+
+.bg-footer-theme {
+  background-color: var(--footer-bg);
+}
+
+.text-footer-theme {
+  color: var(--footer-text);
+}
+
+/* ── Theme utility classes ──────────────────────────────────────────────────
+   Use these instead of hardcoded Tailwind color classes so the entire
+   user-facing site reacts to theme changes from the admin panel.           */
+
+/* Backgrounds */
+.theme-bg      { background-color: var(--background); }
+.theme-surface { background-color: var(--surface); }
+.theme-card-bg { background-color: var(--card); }
+.theme-secondary-bg { background-color: var(--secondary); }
+
+/* Text */
+.theme-text    { color: var(--text-theme); }
+.theme-muted   { color: var(--text-muted); }
+.theme-primary { color: var(--primary); }
+.theme-accent  { color: var(--accent); }
+
+/* Hover helpers */
+.hover\:theme-primary:hover { color: var(--primary); }
+.hover\:theme-text:hover    { color: var(--text-theme); }
+.hover\:theme-bg:hover      { background-color: var(--background); }
+.hover\:theme-card-bg:hover { background-color: var(--card); }
+
+/* Borders */
+.theme-border        { border-color: var(--border-color); }
+.theme-border-primary { border-color: var(--primary); }
+
+/* Full surface combos */
+.theme-card {
+  background-color: var(--card);
+  color: var(--text-theme);
+  border-color: var(--border-color);
+}
+
+.theme-input {
+  background-color: var(--surface);
+  color: var(--text-theme);
+  border-color: var(--border-color);
+}
+.theme-input:focus { border-color: var(--primary); }
+
+/* Badges */
+.badge-sale {
+  background-color: var(--badge-sale-bg, #EF4444);
+  color: #fff;
+}
+.badge-new {
+  background-color: var(--badge-new-bg, var(--primary));
+  color: var(--background);
+}
+.badge-limited {
+  background-color: var(--badge-limited-bg, var(--accent));
+  color: var(--background);
+}
+
+/* Stock / out-of-stock overlay */
+.out-of-stock-overlay {
+  background: rgba(var(--background-rgb, 10,10,10), 0.55);
+}
+
+/* Section backgrounds — alternate to give depth */
+.section-light { background-color: var(--secondary); }
+.section-dark  { background-color: var(--background); }
+
+h1 { font-size: clamp(2.5rem, 5vw, 4.5rem); }
+h2 { font-size: clamp(2rem, 4vw, 3.5rem); }
+h3 { font-size: clamp(1.5rem, 3vw, 2.5rem); }
+h4 { font-size: clamp(1.25rem, 2vw, 2rem); }
+
+p {
+  color: var(--gray-400);
+  font-family: var(--font-body);
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  outline: none;
+  font-family: var(--font-button);
+}
+
+input, select, textarea {
+  font-family: var(--font-ui);
+  outline: none;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+::-webkit-scrollbar {
+  width: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--noir-light);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--gold-dark);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--gold);
+}
+
+@layer components {
+  .gold-text {
+    background: linear-gradient(135deg, #D4AF37 0%, #FFD700 25%, #B8960C 50%, #D4AF37 75%, #B8960C 100%);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: shimmer 3s linear infinite;
+  }
+
+  .glass {
+    background: rgba(var(--background-rgb, 20, 20, 20), 0.7);
+    backdrop-filter: blur(var(--blur-intensity, 20px));
+    -webkit-backdrop-filter: blur(var(--blur-intensity, 20px));
+    border: 1px solid rgba(var(--primary-rgb, 212, 175, 55), 0.1);
+  }
+
+  .glass-light {
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  /* When the admin disables glass effect, flatten every glass surface to a
+     solid background instead of a blur. */
+  .glass-disabled .glass {
+    background: rgba(20, 20, 20, 0.95);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  .glass-disabled .glass-light {
+    background: rgba(255, 255, 255, 0.06);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  /* Driven by --card-bg/--card-border/--card-shadow/--card-backdrop, which
+     themeStore resolves from the admin's Card Style choice (flat | bordered |
+     elevated | glass), and --card-hover-transform/--card-hover-shadow, which
+     it resolves from the Card Hover Effect choice (none | lift | zoom | glow). */
+  .luxury-card {
+    background: var(--card-bg);
+    border: var(--card-border);
+    box-shadow: var(--card-shadow);
+    backdrop-filter: var(--card-backdrop);
+    -webkit-backdrop-filter: var(--card-backdrop);
+    border-radius: var(--radius-lg);
+    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.4s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.4s ease;
+  }
+
+  .luxury-card:hover {
+    border-color: rgba(var(--primary-rgb, 212, 175, 55), 0.3);
+    box-shadow: var(--card-hover-shadow);
+    transform: var(--card-hover-transform);
+  }
+
+  .btn-gold {
+    background: var(--btn-bg, linear-gradient(135deg, #D4AF37 0%, #B8960C 100%));
+    border: var(--btn-border, none);
+    backdrop-filter: var(--btn-backdrop, none);
+    -webkit-backdrop-filter: var(--btn-backdrop, none);
+    color: var(--btn-fg, #0A0A0A);
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    padding: var(--btn-padding, 14px 36px);
+    border-radius: var(--radius-md);
+    font-size: var(--btn-font-size, 14px);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-family: var(--font-button);
+  }
+
+  .btn-gold:hover {
+    box-shadow: var(--btn-hover-shadow, 0 10px 30px rgba(212, 175, 55, 0.3));
+    transform: var(--btn-hover-transform, translateY(-2px));
+  }
+
+  .btn-gold::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    transition: 0.5s;
+  }
+
+  .btn-gold:hover::after {
+    left: 100%;
+  }
+
+  .btn-outline-gold {
+    border: 2px solid var(--btn-color, var(--gold));
+    color: var(--btn-color, var(--gold));
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    padding: var(--btn-padding, 14px 36px);
+    border-radius: var(--radius-md);
+    font-size: var(--btn-font-size, 14px);
+    background: transparent;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-family: var(--font-button);
+  }
+
+  .btn-outline-gold:hover {
+    background: var(--btn-color, var(--gold));
+    color: var(--noir);
+    box-shadow: var(--btn-hover-shadow, 0 10px 30px rgba(212, 175, 55, 0.3));
+    transform: var(--btn-hover-transform, none);
+  }
+
+  .section-title {
+    font-family: var(--font-heading);
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    font-weight: 700;
+    text-align: center;
+    margin-bottom: 1rem;
+  }
+
+  .section-subtitle {
+    color: var(--gray-400);
+    text-align: center;
+    font-size: 1.15rem;
+    margin-bottom: 3rem;
+    font-family: var(--font-body);
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .skeleton {
+    background: linear-gradient(90deg, var(--noir-card) 25%, var(--noir-surface) 50%, var(--noir-card) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: var(--radius-md);
+  }
+
+  .sticky-buy-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(10, 10, 10, 0.95);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-top: 1px solid rgba(212, 175, 55, 0.15);
+    padding: 12px 16px;
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+    z-index: 50;
+  }
+
+  .size-btn {
+    min-width: 80px;
+    height: 48px;
+    border: 1px solid rgba(212, 175, 55, 0.2);
+    background: transparent;
+    color: white;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all 0.3s;
+    font-family: var(--font-ui);
+    font-size: 14px;
+    font-weight: 500;
+  }
+
+  .size-btn:hover,
+  .size-btn.active {
+    border-color: var(--gold);
+    background: rgba(212, 175, 55, 0.12);
+    color: var(--gold);
+  }
+
+  .size-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  .stock-high { color: var(--success); }
+  .stock-moderate { color: var(--warning); }
+  .stock-low { color: var(--error); }
+
+  .pb-safe {
+    padding-bottom: calc(80px + env(safe-area-inset-bottom));
+  }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}

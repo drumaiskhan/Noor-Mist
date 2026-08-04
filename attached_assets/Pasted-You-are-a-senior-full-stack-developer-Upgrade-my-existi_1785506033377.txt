@@ -1,0 +1,694 @@
+You are a senior full-stack developer.
+
+Upgrade my existing Noor Mist e-commerce website with a complete Pakistan payment system.
+
+Tech Stack:
+
+* React + Vite
+* Express.js
+* PostgreSQL
+* Cloudinary
+* Netlify Frontend
+* Render Backend
+
+DO NOT break any existing functionality.
+
+The admin panel already exists and everything must be manageable from the admin dashboard.
+
+---
+
+# 1. Payment Methods
+
+Create a flexible payment system supporting:
+
+* Cash on Delivery (COD)
+* Bank Transfer
+* EasyPaisa
+* JazzCash
+* Sadapay
+* Nayapay
+* Raast
+* Debit/Credit Cards (future-ready)
+* Manual Payment Methods
+
+The admin can enable or disable any payment method without changing code.
+
+---
+
+# 2. Payment Settings (Admin)
+
+Create a new "Payment Settings" page.
+
+The admin can:
+
+* Enable/Disable each payment method
+* Change display order
+* Upload payment logos
+* Change payment instructions
+* Add payment notes
+* Set minimum order amount
+* Set maximum order amount
+* Restrict payment methods by city or province
+* Enable or disable COD
+
+Everything must save in PostgreSQL.
+
+---
+
+# 3. Bank Accounts
+
+Admin can add unlimited bank accounts.
+
+Fields:
+
+* Bank Name
+* Account Title
+* Account Number
+* IBAN
+* Branch Name
+* Branch Code
+* Swift Code (optional)
+* QR Image
+* Logo
+* Instructions
+* Active/Inactive
+
+Support multiple accounts.
+
+Customers only see active accounts.
+
+---
+
+# 4. EasyPaisa
+
+Admin can edit:
+
+* Account Name
+* Mobile Number
+* QR Code
+* Instructions
+
+Upload QR image.
+
+---
+
+# 5. JazzCash
+
+Admin can edit:
+
+* Account Name
+* Mobile Number
+* QR Code
+* Instructions
+
+Upload QR image.
+
+---
+
+# 6. Sadapay
+
+Admin can edit:
+
+* Username
+* Mobile
+* QR Code
+
+---
+
+# 7. Nayapay
+
+Admin can edit:
+
+* Username
+* Mobile
+* QR Code
+
+---
+
+# 8. Raast
+
+Admin can edit:
+
+* Raast ID
+* Linked Bank
+* QR Code
+
+---
+
+# 9. Manual Payment Verification
+
+After selecting Bank Transfer, EasyPaisa, JazzCash, Sadapay, Nayapay or Raast:
+
+Customer uploads:
+
+* Payment Screenshot
+* Transaction ID
+* Sender Name
+* Sender Number
+* Date
+* Optional Notes
+
+Store everything securely.
+
+---
+
+# 10. Admin Verification
+
+Admin sees:
+
+Payment Screenshot
+
+Zoom Image
+
+Customer
+
+Order
+
+Transaction ID
+
+Amount
+
+Payment Method
+
+Status
+
+Buttons:
+
+Approve
+
+Reject
+
+Mark Pending
+
+Refunded
+
+Approved payments automatically change order status to Paid.
+
+Rejected payments notify customer.
+
+---
+
+# 11. Order Status
+
+Pending Payment
+
+Awaiting Verification
+
+Paid
+
+Processing
+
+Packed
+
+Shipped
+
+Delivered
+
+Cancelled
+
+Refunded
+
+---
+
+# 12. Admin Dashboard
+
+Create a Payments section.
+
+Show:
+
+Total Payments
+
+Today's Payments
+
+Pending Verification
+
+Approved
+
+Rejected
+
+Revenue
+
+Payment Method Statistics
+
+Charts
+
+Search
+
+Filters
+
+Export CSV
+
+---
+
+# 13. Customer Order Tracking
+
+Customers can see:
+
+Payment Status
+
+Verification Status
+
+Shipping Status
+
+Invoice
+
+Timeline
+
+---
+
+# 14. Notifications
+
+Email customer when:
+
+Payment approved
+
+Payment rejected
+
+Order shipped
+
+Order delivered
+
+Also notify admin when a customer uploads payment proof.
+
+---
+
+# 15. Upload System
+
+Store screenshots and QR images in Cloudinary.
+
+Delete old files automatically when replaced.
+
+---
+
+# 16. Security
+
+Validate uploads.
+
+Limit image size.
+
+Prevent duplicate transaction IDs.
+
+Prevent duplicate uploads.
+
+Sanitize all input.
+
+Rate limit APIs.
+
+---
+
+# 17. Responsive Design
+
+Desktop
+
+Tablet
+
+Mobile
+
+Use premium animations matching the Noor Mist website.
+
+---
+
+# 18. Future Ready
+
+Design the payment architecture so Stripe, PayPal or any other payment gateway can be added later without changing the checkout flow.
+
+---
+
+# 19. Existing Features
+
+Do NOT remove or break:
+
+Admin Login
+
+Products
+
+Categories
+
+Reviews
+
+Wishlist
+
+Cart
+
+Orders
+
+Cloudinary
+
+Authentication
+
+Website Settings
+
+Theme Settings
+
+Homepage
+
+Everything must continue working exactly as before.
+
+Return a summary of every modified file, every new API endpoint, every database table, and every admin feature added.
+You are a senior full-stack developer.
+
+Upgrade my existing Noor Mist e-commerce website with a complete Pakistan payment system.
+
+Tech Stack:
+
+* React + Vite
+* Express.js
+* PostgreSQL
+* Cloudinary
+* Netlify Frontend
+* Render Backend
+
+DO NOT break any existing functionality.
+
+The admin panel already exists and everything must be manageable from the admin dashboard.
+
+---
+
+# 1. Payment Methods
+
+Create a flexible payment system supporting:
+
+* Cash on Delivery (COD)
+* Bank Transfer
+* EasyPaisa
+* JazzCash
+* Sadapay
+* Nayapay
+* Raast
+* Debit/Credit Cards (future-ready)
+* Manual Payment Methods
+
+The admin can enable or disable any payment method without changing code.
+
+---
+
+# 2. Payment Settings (Admin)
+
+Create a new "Payment Settings" page.
+
+The admin can:
+
+* Enable/Disable each payment method
+* Change display order
+* Upload payment logos
+* Change payment instructions
+* Add payment notes
+* Set minimum order amount
+* Set maximum order amount
+* Restrict payment methods by city or province
+* Enable or disable COD
+
+Everything must save in PostgreSQL.
+
+---
+
+# 3. Bank Accounts
+
+Admin can add unlimited bank accounts.
+
+Fields:
+
+* Bank Name
+* Account Title
+* Account Number
+* IBAN
+* Branch Name
+* Branch Code
+* Swift Code (optional)
+* QR Image
+* Logo
+* Instructions
+* Active/Inactive
+
+Support multiple accounts.
+
+Customers only see active accounts.
+
+---
+
+# 4. EasyPaisa
+
+Admin can edit:
+
+* Account Name
+* Mobile Number
+* QR Code
+* Instructions
+
+Upload QR image.
+
+---
+
+# 5. JazzCash
+
+Admin can edit:
+
+* Account Name
+* Mobile Number
+* QR Code
+* Instructions
+
+Upload QR image.
+
+---
+
+# 6. Sadapay
+
+Admin can edit:
+
+* Username
+* Mobile
+* QR Code
+
+---
+
+# 7. Nayapay
+
+Admin can edit:
+
+* Username
+* Mobile
+* QR Code
+
+---
+
+# 8. Raast
+
+Admin can edit:
+
+* Raast ID
+* Linked Bank
+* QR Code
+
+---
+
+# 9. Manual Payment Verification
+
+After selecting Bank Transfer, EasyPaisa, JazzCash, Sadapay, Nayapay or Raast:
+
+Customer uploads:
+
+* Payment Screenshot
+* Transaction ID
+* Sender Name
+* Sender Number
+* Date
+* Optional Notes
+
+Store everything securely.
+
+---
+
+# 10. Admin Verification
+
+Admin sees:
+
+Payment Screenshot
+
+Zoom Image
+
+Customer
+
+Order
+
+Transaction ID
+
+Amount
+
+Payment Method
+
+Status
+
+Buttons:
+
+Approve
+
+Reject
+
+Mark Pending
+
+Refunded
+
+Approved payments automatically change order status to Paid.
+
+Rejected payments notify customer.
+
+---
+
+# 11. Order Status
+
+Pending Payment
+
+Awaiting Verification
+
+Paid
+
+Processing
+
+Packed
+
+Shipped
+
+Delivered
+
+Cancelled
+
+Refunded
+
+---
+
+# 12. Admin Dashboard
+
+Create a Payments section.
+
+Show:
+
+Total Payments
+
+Today's Payments
+
+Pending Verification
+
+Approved
+
+Rejected
+
+Revenue
+
+Payment Method Statistics
+
+Charts
+
+Search
+
+Filters
+
+Export CSV
+
+---
+
+# 13. Customer Order Tracking
+
+Customers can see:
+
+Payment Status
+
+Verification Status
+
+Shipping Status
+
+Invoice
+
+Timeline
+
+---
+
+# 14. Notifications
+
+Email customer when:
+
+Payment approved
+
+Payment rejected
+
+Order shipped
+
+Order delivered
+
+Also notify admin when a customer uploads payment proof.
+
+---
+
+# 15. Upload System
+
+Store screenshots and QR images in Cloudinary.
+
+Delete old files automatically when replaced.
+
+---
+
+# 16. Security
+
+Validate uploads.
+
+Limit image size.
+
+Prevent duplicate transaction IDs.
+
+Prevent duplicate uploads.
+
+Sanitize all input.
+
+Rate limit APIs.
+
+---
+
+# 17. Responsive Design
+
+Desktop
+
+Tablet
+
+Mobile
+
+Use premium animations matching the Noor Mist website.
+
+---
+
+# 18. Future Ready
+
+Design the payment architecture so Stripe, PayPal or any other payment gateway can be added later without changing the checkout flow.
+
+---
+
+# 19. Existing Features
+
+Do NOT remove or break:
+
+Admin Login
+
+Products
+
+Categories
+
+Reviews
+
+Wishlist
+
+Cart
+
+Orders
+
+Cloudinary
+
+Authentication
+
+Website Settings
+
+Theme Settings
+
+Homepage
+
+Everything must continue working exactly as before.
+
+Return a summary of every modified file, every new API endpoint, every database table, and every admin feature added.

@@ -1,0 +1,1630 @@
+# NOOR MIST — FULL STACK LUXURY PERFUME E-COMMERCE PLATFORM
+
+You are a senior full-stack developer, UI/UX designer, database architect, DevOps engineer, SEO specialist, and performance engineer.
+
+Build a complete production-ready luxury perfume e-commerce website called **Noor Mist**.
+
+This is NOT a demo.
+
+Do not create placeholder pages.
+
+Do not leave empty files.
+
+Every component, route, API, database model, and admin feature must be functional.
+
+Build it with a scalable architecture.
+
+---
+
+# TECH STACK
+
+## Frontend
+
+* React + Vite
+* Tailwind CSS
+* Framer Motion animations
+* React Router
+* Zustand state management
+* React Query
+* Axios
+* React Helmet SEO
+
+## Backend
+
+* Node.js
+* Express
+* PostgreSQL
+* JWT authentication
+* bcrypt password security
+* Cloudinary image storage
+* Multer uploads
+
+## Deployment
+
+Frontend:
+Netlify
+
+Backend:
+Render
+
+Database:
+PostgreSQL
+
+Images:
+Cloudinary
+
+---
+
+# MAIN GOAL
+
+Create a premium perfume store similar to international luxury fragrance websites.
+
+Priority:
+
+1. Mobile experience
+2. Speed
+3. Luxury UI
+4. Smooth animations
+5. Admin control
+6. SEO
+
+Everything should be editable from admin panel.
+
+No important content should be hardcoded.
+
+---
+
+# DESIGN SYSTEM
+
+Luxury appearance:
+
+Colors:
+
+* Black
+* Gold
+* White
+* Dark gradients
+* Glass effects
+
+Typography:
+
+Luxury serif headings.
+
+Modern clean body font.
+
+Animations:
+
+* Framer Motion
+* Scroll reveal
+* Fade
+* Slide
+* Blur
+* Hover effects
+* Page transitions
+
+Create a premium feel.
+
+---
+
+# HOMEPAGE
+
+Create:
+
+## Hero Section
+
+Admin controlled:
+
+* Background image/video
+* Heading
+* Subtitle
+* Buttons
+* CTA links
+* Badges
+
+## Sections
+
+* Featured perfumes
+* Best sellers
+* New arrivals
+* Limited editions
+* Luxury collections
+* Gift sets
+* Perfume finder
+* Fragrance quiz
+* Brand story
+* Testimonials
+* Instagram section
+* Newsletter
+* Trust badges
+
+Admin can:
+
+* Enable/disable sections
+* Change order
+* Change images
+* Change text
+
+---
+
+# SHOP PAGE
+
+Features:
+
+* Search bar
+* Instant search
+* Search suggestions
+* Filters
+* Sorting
+
+Filters:
+
+* Brand
+* Category
+* Collection
+* Gender
+* Fragrance family
+* Price
+* Rating
+* Availability
+
+Sorting:
+
+* Newest
+* Best selling
+* Price low-high
+* Price high-low
+* Rating
+
+Mobile filter drawer.
+
+Fast loading.
+
+Skeleton loading.
+
+---
+
+# PERFUME PRODUCT SYSTEM
+
+A perfume is one product with unlimited variants.
+
+Do NOT hardcode sizes.
+
+Admin manually enters bottle sizes.
+
+Examples:
+
+5ml
+
+10ml
+
+20ml
+
+30ml
+
+35ml
+
+40ml
+
+50ml
+
+75ml
+
+100ml
+
+120ml
+
+250ml
+
+Admin can create any size.
+
+Each variant contains:
+
+* Custom size value
+* Unit
+* Price
+* Sale price
+* Stock
+* SKU
+* Barcode
+* Weight
+* Variant image
+* Availability
+
+Example:
+
+Noor Mist Royal Oud
+
+30ml
+
+Price:
+2999
+
+Stock:
+50
+
+50ml
+
+Price:
+4499
+
+Stock:
+20
+
+100ml
+
+Price:
+6999
+
+Stock:
+5
+
+---
+
+# PRODUCT PAGE
+
+Every product card opens a complete interactive page.
+
+Route:
+
+/product/product-slug
+
+Features:
+
+## Gallery
+
+* Multiple images
+* Thumbnail selector
+* Zoom
+* Fullscreen viewer
+* Mobile swipe
+* Product videos
+
+## Information
+
+Show:
+
+* Name
+* Brand
+* Description
+* Rating
+* Reviews
+* Concentration
+* Gender
+* Fragrance family
+
+## Size Selection
+
+Dynamic sizes from database.
+
+When selecting size:
+
+Automatically update:
+
+* Price
+* Sale price
+* Discount
+* Stock
+* SKU
+* Cart information
+
+## Add To Cart
+
+Must require size selection.
+
+Cart stores:
+
+* Product
+* Variant
+* Size
+* Price
+* Quantity
+* SKU
+
+## Wishlist
+
+* Add/remove
+* Guest support
+* User sync
+
+---
+
+# FRAGRANCE INFORMATION
+
+Admin can add:
+
+Top notes
+
+Heart notes
+
+Base notes
+
+Longevity
+
+Projection
+
+Season
+
+Occasion
+
+Concentration:
+
+* Eau de Parfum
+* Parfum
+* Extrait
+
+Display beautiful fragrance pyramid.
+
+---
+
+# REVIEWS SYSTEM
+
+Frontend:
+
+Customers can:
+
+* Give stars
+* Write review
+* Upload images
+
+Display:
+
+* Average rating
+* Rating count
+* Customer photos
+* Verified purchase badge
+* Admin replies
+
+Admin:
+
+* Approve reviews
+* Delete reviews
+* Reply
+* Feature reviews
+
+---
+
+# CART SYSTEM
+
+Support:
+
+* Multiple perfume sizes
+* Quantity changes
+* Remove items
+* Coupon codes
+* Persistent cart
+* Guest cart
+
+Mobile cart drawer.
+
+---
+
+# CHECKOUT
+
+Include:
+
+* Guest checkout
+* User checkout
+* Shipping details
+* Billing
+* Order summary
+* Coupon
+* Order confirmation
+
+---
+
+# USER ACCOUNT
+
+Pages:
+
+* Profile
+* Orders
+* Wishlist
+* Addresses
+* Password
+* Notifications
+
+---
+
+# ADMIN PANEL
+
+Create a professional dashboard.
+
+## Dashboard
+
+Show:
+
+Cards:
+
+* Total sales
+* Revenue
+* Orders
+* Customers
+* Average order value
+
+Charts:
+
+* Daily sales
+* Weekly sales
+* Monthly sales
+* Revenue graph
+* Orders graph
+
+Show:
+
+* Best selling perfumes
+* Best selling sizes
+* Recent orders
+* Recent reviews
+* Low stock products
+
+---
+
+# ADMIN PRODUCT MANAGEMENT
+
+Admin can:
+
+Create
+
+Edit
+
+Delete
+
+Duplicate
+
+Product form:
+
+Basic:
+
+* Name
+* Description
+* Brand
+* Category
+* Collection
+* Gender
+
+Fragrance:
+
+* Notes
+* Longevity
+* Projection
+* Season
+* Occasion
+
+Media:
+
+* Upload images
+* Upload videos
+* Cloudinary
+
+Variants:
+
+Dynamic size creator.
+
+---
+
+# XML PRODUCT IMPORT / EXPORT
+
+Admin can:
+
+Import products using XML.
+
+Export products as XML.
+
+Features:
+
+* Bulk upload
+* Validation
+* Preview before import
+* Duplicate detection
+* SKU checking
+* Error reports
+
+XML supports:
+
+Product name
+
+Description
+
+Brand
+
+Category
+
+Notes
+
+Images
+
+Unlimited variants
+
+Prices
+
+Stock
+
+SKU
+
+---
+
+# INVENTORY MANAGEMENT
+
+Track stock per variant.
+
+Stock levels:
+
+0:
+
+Out of stock
+
+1-10:
+
+Low
+
+11-50:
+
+Moderate
+
+50+:
+
+High
+
+Admin dashboard:
+
+* Stock alerts
+* Restock history
+* Sales per size
+* Inventory reports
+
+---
+
+# ORDER MANAGEMENT
+
+Statuses:
+
+* Pending
+* Confirmed
+* Packed
+* Shipped
+* Delivered
+* Cancelled
+* Refunded
+
+Admin can:
+
+* Update status
+* Add notes
+* View customer information
+* Generate invoice
+
+---
+
+# SOCIAL MEDIA SETTINGS
+
+Admin Settings:
+
+Allow adding:
+
+* Facebook
+* Instagram
+* TikTok
+* YouTube
+* X
+* Snapchat
+* Pinterest
+* WhatsApp
+* LinkedIn
+* Telegram
+* Custom links
+
+Each has:
+
+* Name
+* Icon
+* URL
+* Active toggle
+* Display location
+
+Frontend automatically displays them.
+
+No hardcoded links.
+
+---
+
+# THEME EDITOR
+
+Admin controls:
+
+* Primary color
+* Secondary color
+* Accent color
+* Fonts
+* Button styles
+* Border radius
+* Animation intensity
+* Dark/light mode
+
+Changes apply instantly.
+
+---
+
+# HOMEPAGE BUILDER
+
+Admin controls:
+
+* Sections
+* Images
+* Text
+* Buttons
+* Ordering
+* Visibility
+
+---
+
+# SEO SYSTEM
+
+Admin editable:
+
+* Page title
+* Meta description
+* Keywords
+* Open Graph
+* Twitter cards
+* Sitemap
+* Robots.txt
+* Structured data
+
+SEO friendly URLs.
+
+---
+
+# ANALYTICS
+
+Track:
+
+* Sales
+* Revenue
+* Orders
+* Customers
+* Returning customers
+* Best perfumes
+* Best sizes
+* Conversion
+
+Charts in admin dashboard.
+
+---
+
+# SECURITY
+
+Implement:
+
+* JWT authentication
+* Protected admin routes
+* Password hashing
+* Input validation
+* CORS
+* Helmet
+* Rate limiting
+
+---
+
+# PERFORMANCE
+
+Optimize:
+
+* Lazy loading
+* Image optimization
+* React Query caching
+* Code splitting
+* Debounced search
+* Minimal re-rendering
+
+---
+
+# MOBILE FIRST REQUIREMENTS
+
+Perfect on:
+
+320px
+
+375px
+
+390px
+
+414px
+
+768px
+
+1024px
+
+1440px
+
+Mobile features:
+
+* Bottom navigation
+* Sticky buy button
+* Swipe gallery
+* Touch friendly buttons
+* Fast loading
+
+---
+
+# DATABASE TABLES
+
+Create:
+
+Users
+
+Admins
+
+Products
+
+Product Variants
+
+Categories
+
+Collections
+
+Brands
+
+Orders
+
+Order Items
+
+Reviews
+
+Review Images
+
+Wishlist
+
+Inventory
+
+Stock History
+
+Coupons
+
+Homepage Sections
+
+Theme Settings
+
+Social Settings
+
+SEO Settings
+
+Analytics
+
+Uploads
+
+---
+
+# IMPORTANT DEVELOPMENT RULES
+
+Build folder by folder.
+
+Create every file with complete code.
+
+Do not skip components.
+
+Do not leave empty folders.
+
+Connect frontend and backend.
+
+Test every route.
+
+Verify imports.
+
+Make a scalable professional application.
+
+The final Noor Mist website should feel like a premium international perfume brand with a complete Shopify-level admin system.
+# NOOR MIST — FULL STACK LUXURY PERFUME E-COMMERCE PLATFORM
+
+You are a senior full-stack developer, UI/UX designer, database architect, DevOps engineer, SEO specialist, and performance engineer.
+
+Build a complete production-ready luxury perfume e-commerce website called **Noor Mist**.
+
+This is NOT a demo.
+
+Do not create placeholder pages.
+
+Do not leave empty files.
+
+Every component, route, API, database model, and admin feature must be functional.
+
+Build it with a scalable architecture.
+
+---
+
+# TECH STACK
+
+## Frontend
+
+* React + Vite
+* Tailwind CSS
+* Framer Motion animations
+* React Router
+* Zustand state management
+* React Query
+* Axios
+* React Helmet SEO
+
+## Backend
+
+* Node.js
+* Express
+* PostgreSQL
+* JWT authentication
+* bcrypt password security
+* Cloudinary image storage
+* Multer uploads
+
+## Deployment
+
+Frontend:
+Netlify
+
+Backend:
+Render
+
+Database:
+PostgreSQL
+
+Images:
+Cloudinary
+
+---
+
+# MAIN GOAL
+
+Create a premium perfume store similar to international luxury fragrance websites.
+
+Priority:
+
+1. Mobile experience
+2. Speed
+3. Luxury UI
+4. Smooth animations
+5. Admin control
+6. SEO
+
+Everything should be editable from admin panel.
+
+No important content should be hardcoded.
+
+---
+
+# DESIGN SYSTEM
+
+Luxury appearance:
+
+Colors:
+
+* Black
+* Gold
+* White
+* Dark gradients
+* Glass effects
+
+Typography:
+
+Luxury serif headings.
+
+Modern clean body font.
+
+Animations:
+
+* Framer Motion
+* Scroll reveal
+* Fade
+* Slide
+* Blur
+* Hover effects
+* Page transitions
+
+Create a premium feel.
+
+---
+
+# HOMEPAGE
+
+Create:
+
+## Hero Section
+
+Admin controlled:
+
+* Background image/video
+* Heading
+* Subtitle
+* Buttons
+* CTA links
+* Badges
+
+## Sections
+
+* Featured perfumes
+* Best sellers
+* New arrivals
+* Limited editions
+* Luxury collections
+* Gift sets
+* Perfume finder
+* Fragrance quiz
+* Brand story
+* Testimonials
+* Instagram section
+* Newsletter
+* Trust badges
+
+Admin can:
+
+* Enable/disable sections
+* Change order
+* Change images
+* Change text
+
+---
+
+# SHOP PAGE
+
+Features:
+
+* Search bar
+* Instant search
+* Search suggestions
+* Filters
+* Sorting
+
+Filters:
+
+* Brand
+* Category
+* Collection
+* Gender
+* Fragrance family
+* Price
+* Rating
+* Availability
+
+Sorting:
+
+* Newest
+* Best selling
+* Price low-high
+* Price high-low
+* Rating
+
+Mobile filter drawer.
+
+Fast loading.
+
+Skeleton loading.
+
+---
+
+# PERFUME PRODUCT SYSTEM
+
+A perfume is one product with unlimited variants.
+
+Do NOT hardcode sizes.
+
+Admin manually enters bottle sizes.
+
+Examples:
+
+5ml
+
+10ml
+
+20ml
+
+30ml
+
+35ml
+
+40ml
+
+50ml
+
+75ml
+
+100ml
+
+120ml
+
+250ml
+
+Admin can create any size.
+
+Each variant contains:
+
+* Custom size value
+* Unit
+* Price
+* Sale price
+* Stock
+* SKU
+* Barcode
+* Weight
+* Variant image
+* Availability
+
+Example:
+
+Noor Mist Royal Oud
+
+30ml
+
+Price:
+2999
+
+Stock:
+50
+
+50ml
+
+Price:
+4499
+
+Stock:
+20
+
+100ml
+
+Price:
+6999
+
+Stock:
+5
+
+---
+
+# PRODUCT PAGE
+
+Every product card opens a complete interactive page.
+
+Route:
+
+/product/product-slug
+
+Features:
+
+## Gallery
+
+* Multiple images
+* Thumbnail selector
+* Zoom
+* Fullscreen viewer
+* Mobile swipe
+* Product videos
+
+## Information
+
+Show:
+
+* Name
+* Brand
+* Description
+* Rating
+* Reviews
+* Concentration
+* Gender
+* Fragrance family
+
+## Size Selection
+
+Dynamic sizes from database.
+
+When selecting size:
+
+Automatically update:
+
+* Price
+* Sale price
+* Discount
+* Stock
+* SKU
+* Cart information
+
+## Add To Cart
+
+Must require size selection.
+
+Cart stores:
+
+* Product
+* Variant
+* Size
+* Price
+* Quantity
+* SKU
+
+## Wishlist
+
+* Add/remove
+* Guest support
+* User sync
+
+---
+
+# FRAGRANCE INFORMATION
+
+Admin can add:
+
+Top notes
+
+Heart notes
+
+Base notes
+
+Longevity
+
+Projection
+
+Season
+
+Occasion
+
+Concentration:
+
+* Eau de Parfum
+* Parfum
+* Extrait
+
+Display beautiful fragrance pyramid.
+
+---
+
+# REVIEWS SYSTEM
+
+Frontend:
+
+Customers can:
+
+* Give stars
+* Write review
+* Upload images
+
+Display:
+
+* Average rating
+* Rating count
+* Customer photos
+* Verified purchase badge
+* Admin replies
+
+Admin:
+
+* Approve reviews
+* Delete reviews
+* Reply
+* Feature reviews
+
+---
+
+# CART SYSTEM
+
+Support:
+
+* Multiple perfume sizes
+* Quantity changes
+* Remove items
+* Coupon codes
+* Persistent cart
+* Guest cart
+
+Mobile cart drawer.
+
+---
+
+# CHECKOUT
+
+Include:
+
+* Guest checkout
+* User checkout
+* Shipping details
+* Billing
+* Order summary
+* Coupon
+* Order confirmation
+
+---
+
+# USER ACCOUNT
+
+Pages:
+
+* Profile
+* Orders
+* Wishlist
+* Addresses
+* Password
+* Notifications
+
+---
+
+# ADMIN PANEL
+
+Create a professional dashboard.
+
+## Dashboard
+
+Show:
+
+Cards:
+
+* Total sales
+* Revenue
+* Orders
+* Customers
+* Average order value
+
+Charts:
+
+* Daily sales
+* Weekly sales
+* Monthly sales
+* Revenue graph
+* Orders graph
+
+Show:
+
+* Best selling perfumes
+* Best selling sizes
+* Recent orders
+* Recent reviews
+* Low stock products
+
+---
+
+# ADMIN PRODUCT MANAGEMENT
+
+Admin can:
+
+Create
+
+Edit
+
+Delete
+
+Duplicate
+
+Product form:
+
+Basic:
+
+* Name
+* Description
+* Brand
+* Category
+* Collection
+* Gender
+
+Fragrance:
+
+* Notes
+* Longevity
+* Projection
+* Season
+* Occasion
+
+Media:
+
+* Upload images
+* Upload videos
+* Cloudinary
+
+Variants:
+
+Dynamic size creator.
+
+---
+
+# XML PRODUCT IMPORT / EXPORT
+
+Admin can:
+
+Import products using XML.
+
+Export products as XML.
+
+Features:
+
+* Bulk upload
+* Validation
+* Preview before import
+* Duplicate detection
+* SKU checking
+* Error reports
+
+XML supports:
+
+Product name
+
+Description
+
+Brand
+
+Category
+
+Notes
+
+Images
+
+Unlimited variants
+
+Prices
+
+Stock
+
+SKU
+
+---
+
+# INVENTORY MANAGEMENT
+
+Track stock per variant.
+
+Stock levels:
+
+0:
+
+Out of stock
+
+1-10:
+
+Low
+
+11-50:
+
+Moderate
+
+50+:
+
+High
+
+Admin dashboard:
+
+* Stock alerts
+* Restock history
+* Sales per size
+* Inventory reports
+
+---
+
+# ORDER MANAGEMENT
+
+Statuses:
+
+* Pending
+* Confirmed
+* Packed
+* Shipped
+* Delivered
+* Cancelled
+* Refunded
+
+Admin can:
+
+* Update status
+* Add notes
+* View customer information
+* Generate invoice
+
+---
+
+# SOCIAL MEDIA SETTINGS
+
+Admin Settings:
+
+Allow adding:
+
+* Facebook
+* Instagram
+* TikTok
+* YouTube
+* X
+* Snapchat
+* Pinterest
+* WhatsApp
+* LinkedIn
+* Telegram
+* Custom links
+
+Each has:
+
+* Name
+* Icon
+* URL
+* Active toggle
+* Display location
+
+Frontend automatically displays them.
+
+No hardcoded links.
+
+---
+
+# THEME EDITOR
+
+Admin controls:
+
+* Primary color
+* Secondary color
+* Accent color
+* Fonts
+* Button styles
+* Border radius
+* Animation intensity
+* Dark/light mode
+
+Changes apply instantly.
+
+---
+
+# HOMEPAGE BUILDER
+
+Admin controls:
+
+* Sections
+* Images
+* Text
+* Buttons
+* Ordering
+* Visibility
+
+---
+
+# SEO SYSTEM
+
+Admin editable:
+
+* Page title
+* Meta description
+* Keywords
+* Open Graph
+* Twitter cards
+* Sitemap
+* Robots.txt
+* Structured data
+
+SEO friendly URLs.
+
+---
+
+# ANALYTICS
+
+Track:
+
+* Sales
+* Revenue
+* Orders
+* Customers
+* Returning customers
+* Best perfumes
+* Best sizes
+* Conversion
+
+Charts in admin dashboard.
+
+---
+
+# SECURITY
+
+Implement:
+
+* JWT authentication
+* Protected admin routes
+* Password hashing
+* Input validation
+* CORS
+* Helmet
+* Rate limiting
+
+---
+
+# PERFORMANCE
+
+Optimize:
+
+* Lazy loading
+* Image optimization
+* React Query caching
+* Code splitting
+* Debounced search
+* Minimal re-rendering
+
+---
+
+# MOBILE FIRST REQUIREMENTS
+
+Perfect on:
+
+320px
+
+375px
+
+390px
+
+414px
+
+768px
+
+1024px
+
+1440px
+
+Mobile features:
+
+* Bottom navigation
+* Sticky buy button
+* Swipe gallery
+* Touch friendly buttons
+* Fast loading
+
+---
+
+# DATABASE TABLES
+
+Create:
+
+Users
+
+Admins
+
+Products
+
+Product Variants
+
+Categories
+
+Collections
+
+Brands
+
+Orders
+
+Order Items
+
+Reviews
+
+Review Images
+
+Wishlist
+
+Inventory
+
+Stock History
+
+Coupons
+
+Homepage Sections
+
+Theme Settings
+
+Social Settings
+
+SEO Settings
+
+Analytics
+
+Uploads
+
+---
+
+# IMPORTANT DEVELOPMENT RULES
+
+Build folder by folder.
+
+Create every file with complete code.
+
+Do not skip components.
+
+Do not leave empty folders.
+
+Connect frontend and backend.
+
+Test every route.
+
+Verify imports.
+
+Make a scalable professional application.
+
+The final Noor Mist website should feel like a premium international perfume brand with a complete Shopify-level admin system.

@@ -1,0 +1,565 @@
+# ADVANCED HOMEPAGE VISUAL BUILDER & CONTENT UPDATER
+
+Create a complete admin-controlled homepage management system.
+
+Admin Panel → Homepage Builder
+
+The admin must be able to update every visual element of the homepage without touching code.
+
+
+HERO SECTION MANAGER
+
+Admin can edit:
+
+Hero background:
+
+- Upload desktop hero image
+- Upload mobile hero image
+- Upload hero video
+- Replace existing media
+- Delete media
+
+
+Hero content:
+
+- Main heading
+- Subtitle
+- Description
+- Small eyebrow text
+- Primary button text
+- Primary button link
+- Secondary button text
+- Secondary button link
+
+
+Hero design:
+
+- Text alignment
+- Text position
+- Overlay darkness
+- Animation style
+- Enable/disable hero animation
+
+
+Example:
+
+Heading:
+
+"Discover Your Signature Scent"
+
+
+Subtitle:
+
+"Luxury fragrances crafted for unforgettable moments"
+
+
+Button:
+
+"Shop Collection"
+
+
+
+COLLECTION IMAGE MANAGER
+
+Admin can manage perfume collections.
+
+
+Each collection has:
+
+- Collection name
+- Description
+- Image
+- Mobile image
+- Link
+- Display order
+- Active/inactive toggle
+
+
+Examples:
+
+- Men's Collection
+- Women's Collection
+- Oud Collection
+- Luxury Collection
+- Gift Collection
+- New Arrivals
+
+
+Admin can:
+
+- Add unlimited collections
+- Change collection images
+- Rearrange collection order
+- Hide/show collections
+
+
+
+HOMEPAGE SECTION IMAGE UPDATER
+
+Every homepage section must have editable media.
+
+
+Sections:
+
+Hero
+
+Featured Categories
+
+Best Sellers
+
+New Arrivals
+
+Limited Edition
+
+Seasonal Collection
+
+Gift Sets
+
+Brand Story
+
+Testimonials
+
+Instagram Section
+
+
+Admin can change:
+
+- Images
+- Videos
+- Backgrounds
+- Text
+- Buttons
+- Section visibility
+- Section order
+
+
+
+GLOBAL FONT MANAGER
+
+Create a font management system in Admin Settings.
+
+
+Admin can change:
+
+Heading font
+
+Body font
+
+Button font
+
+Navigation font
+
+
+Include options:
+
+- Google Fonts integration
+- Custom font upload
+- Font preview
+
+
+Examples:
+
+Heading:
+
+Playfair Display
+
+Cormorant Garamond
+
+Cinzel
+
+
+Body:
+
+Inter
+
+Montserrat
+
+Lato
+
+
+Changes must update the entire frontend instantly.
+
+
+
+COLOR & BRANDING MANAGER
+
+Admin can control:
+
+Primary color
+
+Secondary color
+
+Accent color
+
+Gold color
+
+Background color
+
+Text color
+
+Button color
+
+
+Admin can also change:
+
+- Logo
+- Dark logo
+- Favicon
+- Browser title
+- Brand tagline
+
+
+
+LIVE PREVIEW SYSTEM
+
+Homepage Builder must include:
+
+- Live preview before publishing
+- Save changes button
+- Reset changes option
+- Mobile preview mode
+- Desktop preview mode
+
+
+DATABASE
+
+Create tables:
+
+homepage_sections
+
+id
+
+section_name
+
+title
+
+description
+
+image_url
+
+mobile_image_url
+
+video_url
+
+button_text
+
+button_link
+
+display_order
+
+is_active
+
+
+theme_settings
+
+id
+
+heading_font
+
+body_font
+
+primary_color
+
+secondary_color
+
+accent_color
+
+
+social_settings
+
+id
+
+platform
+
+url
+
+icon
+
+is_active
+
+
+All homepage content must come from database.
+
+# ADVANCED HOMEPAGE VISUAL BUILDER & CONTENT UPDATER
+
+Create a complete admin-controlled homepage management system.
+
+Admin Panel → Homepage Builder
+
+The admin must be able to update every visual element of the homepage without touching code.
+
+
+HERO SECTION MANAGER
+
+Admin can edit:
+
+Hero background:
+
+- Upload desktop hero image
+- Upload mobile hero image
+- Upload hero video
+- Replace existing media
+- Delete media
+
+
+Hero content:
+
+- Main heading
+- Subtitle
+- Description
+- Small eyebrow text
+- Primary button text
+- Primary button link
+- Secondary button text
+- Secondary button link
+
+
+Hero design:
+
+- Text alignment
+- Text position
+- Overlay darkness
+- Animation style
+- Enable/disable hero animation
+
+
+Example:
+
+Heading:
+
+"Discover Your Signature Scent"
+
+
+Subtitle:
+
+"Luxury fragrances crafted for unforgettable moments"
+
+
+Button:
+
+"Shop Collection"
+
+
+
+COLLECTION IMAGE MANAGER
+
+Admin can manage perfume collections.
+
+
+Each collection has:
+
+- Collection name
+- Description
+- Image
+- Mobile image
+- Link
+- Display order
+- Active/inactive toggle
+
+
+Examples:
+
+- Men's Collection
+- Women's Collection
+- Oud Collection
+- Luxury Collection
+- Gift Collection
+- New Arrivals
+
+
+Admin can:
+
+- Add unlimited collections
+- Change collection images
+- Rearrange collection order
+- Hide/show collections
+
+
+
+HOMEPAGE SECTION IMAGE UPDATER
+
+Every homepage section must have editable media.
+
+
+Sections:
+
+Hero
+
+Featured Categories
+
+Best Sellers
+
+New Arrivals
+
+Limited Edition
+
+Seasonal Collection
+
+Gift Sets
+
+Brand Story
+
+Testimonials
+
+Instagram Section
+
+
+Admin can change:
+
+- Images
+- Videos
+- Backgrounds
+- Text
+- Buttons
+- Section visibility
+- Section order
+
+
+
+GLOBAL FONT MANAGER
+
+Create a font management system in Admin Settings.
+
+
+Admin can change:
+
+Heading font
+
+Body font
+
+Button font
+
+Navigation font
+
+
+Include options:
+
+- Google Fonts integration
+- Custom font upload
+- Font preview
+
+
+Examples:
+
+Heading:
+
+Playfair Display
+
+Cormorant Garamond
+
+Cinzel
+
+
+Body:
+
+Inter
+
+Montserrat
+
+Lato
+
+
+Changes must update the entire frontend instantly.
+
+
+
+COLOR & BRANDING MANAGER
+
+Admin can control:
+
+Primary color
+
+Secondary color
+
+Accent color
+
+Gold color
+
+Background color
+
+Text color
+
+Button color
+
+
+Admin can also change:
+
+- Logo
+- Dark logo
+- Favicon
+- Browser title
+- Brand tagline
+
+
+
+LIVE PREVIEW SYSTEM
+
+Homepage Builder must include:
+
+- Live preview before publishing
+- Save changes button
+- Reset changes option
+- Mobile preview mode
+- Desktop preview mode
+
+
+DATABASE
+
+Create tables:
+
+homepage_sections
+
+id
+
+section_name
+
+title
+
+description
+
+image_url
+
+mobile_image_url
+
+video_url
+
+button_text
+
+button_link
+
+display_order
+
+is_active
+
+
+theme_settings
+
+id
+
+heading_font
+
+body_font
+
+primary_color
+
+secondary_color
+
+accent_color
+
+
+social_settings
+
+id
+
+platform
+
+url
+
+icon
+
+is_active
+
+
+All homepage content must come from database.
+
+No hardcoded homepage images or text.
