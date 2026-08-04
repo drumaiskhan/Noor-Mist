@@ -1,25 +1,36 @@
-import React from 'react';
-import { Helmet } from 'react-helmet-async';
-import { useQuery } from '@tanstack/react-query';
-import { homepageAPI } from '../services/api';
+import React from "react";
+import { Helmet } from "react-helmet-async";
+import { useQuery } from "@tanstack/react-query";
+import { homepageAPI, collectionsAPI } from "../services/api";
 
-import HeroBanner from '../components/Home/HeroBanner';
-import PerfumeFinder from '../components/Home/PerfumeFinder';
-import Collections from '../components/Home/Collections';
-import BestSellers from '../components/Home/BestSellers';
-import NewArrivals from '../components/Home/NewArrivals';
-import BrandStory from '../components/Home/BrandStory';
-import Testimonials from '../components/Home/Testimonials';
-import InstagramFeed from '../components/Home/InstagramFeed';
-import Newsletter from '../components/Home/Newsletter';
-import TrustBadges from '../components/Home/TrustBadges';
+import HeroBanner from "../components/Home/HeroBanner";
+import PerfumeFinder from "../components/Home/PerfumeFinder";
+import Collections from "../components/Home/Collections";
+import BestSellers from "../components/Home/BestSellers";
+import NewArrivals from "../components/Home/NewArrivals";
+import BrandStory from "../components/Home/BrandStory";
+import Testimonials from "../components/Home/Testimonials";
+import InstagramFeed from "../components/Home/InstagramFeed";
+import Newsletter from "../components/Home/Newsletter";
+import TrustBadges from "../components/Home/TrustBadges";
 
 export default function Home() {
+
+  // Homepage Builder Sections
   const { data: sectionsData } = useQuery({
-    queryKey: ['homepageSections'],
+    queryKey: ["homepageSections"],
     queryFn: homepageAPI.getSections,
     staleTime: 5 * 60 * 1000,
   });
+
+
+  // Dynamic Collections CMS
+  const { data: collectionsData } = useQuery({
+    queryKey: ["homepageCollections"],
+    queryFn: collectionsAPI.getAll,
+    staleTime: 5 * 60 * 1000,
+  });
+
 
   const sections = Array.isArray(sectionsData)
     ? sectionsData
@@ -27,17 +38,33 @@ export default function Home() {
       ? sectionsData.data
       : [];
 
+
+  const collections = (
+    collectionsData?.data?.collections ||
+    collectionsData?.data ||
+    []
+  ).filter(
+    (collection) => collection.is_active !== false
+  );
+
+
   const getSectionData = (type) => {
+
     const section = sections.find(
-      (s) => s.section_type === type && s.is_enabled
+      (s) =>
+        s.section_type === type &&
+        s.is_enabled
     );
 
     return section?.content_data || {};
+
   };
+
 
   return (
     <>
       <Helmet>
+
         <title>
           Noor Mist - Luxury Perfumes | Where Luxury Meets Mystery
         </title>
@@ -56,27 +83,63 @@ export default function Home() {
           property="og:description"
           content="Where Luxury Meets Mystery. Discover our exclusive collection of premium fragrances."
         />
+
       </Helmet>
 
-      <HeroBanner data={getSectionData('hero')} />
 
+      {/* Hero */}
+      <HeroBanner
+        data={getSectionData("hero")}
+      />
+
+
+      {/* Trust */}
       <TrustBadges />
 
-      <Collections data={getSectionData('collections')} />
 
-      <BestSellers data={getSectionData('bestsellers')} />
 
-      <NewArrivals data={getSectionData('new_arrivals')} />
+      {/* Dynamic Collections CMS */}
+      <Collections
+        data={collections}
+      />
 
-      <PerfumeFinder data={getSectionData('perfume_finder')} />
 
-      <BrandStory data={getSectionData('brand_story')} />
 
-      <Testimonials data={getSectionData('testimonials')} />
+      {/* Products */}
+      <BestSellers
+        data={getSectionData("bestsellers")}
+      />
 
-      <InstagramFeed data={getSectionData('instagram')} />
 
-      <Newsletter data={getSectionData('newsletter')} />
+      <NewArrivals
+        data={getSectionData("new_arrivals")}
+      />
+
+
+      <PerfumeFinder
+        data={getSectionData("perfume_finder")}
+      />
+
+
+      <BrandStory
+        data={getSectionData("brand_story")}
+      />
+
+
+      <Testimonials
+        data={getSectionData("testimonials")}
+      />
+
+
+      <InstagramFeed
+        data={getSectionData("instagram")}
+      />
+
+
+      <Newsletter
+        data={getSectionData("newsletter")}
+      />
+
     </>
   );
 }
