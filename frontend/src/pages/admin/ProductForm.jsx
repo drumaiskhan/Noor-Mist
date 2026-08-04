@@ -60,7 +60,7 @@ export default function ProductForm() {
   const { data: productData, isLoading: isLoadingProduct } = useQuery({
     queryKey: ['adminProduct', id],
     queryFn: async () => {
-      const { data } = await productAPI.getOne(id);
+      const { data } = await productAPI.getOneById(id);
       return data;
     },
     enabled: isEditing,
@@ -160,7 +160,9 @@ export default function ProductForm() {
     setImageFiles(files);
     try {
       const { data } = await uploadAPI.images(files);
-      setImages([...images, ...data]);
+      // data = { images: [...] }  — spread the array, not the object
+      const uploaded = Array.isArray(data) ? data : (data.images || []);
+      setImages([...images, ...uploaded]);
       toast.success('Images uploaded');
     } catch {
       toast.error('Upload failed');
@@ -183,6 +185,7 @@ export default function ProductForm() {
         sale_price: v.sale_price ? parseFloat(v.sale_price) : null,
         quantity: parseInt(v.quantity) || 0,
       })),
+      images,
     });
   };
 

@@ -13,12 +13,19 @@ export default function Analytics() {
 
   const { data, isLoading } = useQuery({
     queryKey: ['analytics', period],
-    queryFn: () => analyticsAPI.getSales({ period }),
+    queryFn: async () => {
+      const { data } = await analyticsAPI.getSales({ period });
+      return data;
+    },
   });
 
-  const stats = data?.data?.stats || { revenue: 0, orders: 0, customers: 0, conversionRate: 0 };
-  const salesData = data?.data?.salesData || [];
-  const topProducts = data?.data?.topProducts || [];
+  // Backend now returns { salesData, stats, topProducts, period }
+  const stats = data?.stats || { revenue: 0, orders: 0, customers: 0, conversionRate: 0 };
+  const salesData = (data?.salesData || []).map((r) => ({
+    ...r,
+    date: new Date(r.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+  }));
+  const topProducts = data?.topProducts || [];
 
   return (
     <div className="space-y-8">
@@ -90,7 +97,7 @@ export default function Analytics() {
               {topProducts.map((product, i) => (
                 <tr key={i} className="border-b border-gray-800/50">
                   <td className="p-3 text-white text-sm">{product.name}</td>
-                  <td className="p-3 text-gray-400 text-sm">{product.total_sold}</td>
+                  <td className="p-3 text-gray-400 text-sm">{product.sold ?? product.total_sold ?? 0}</td>
                   <td className="p-3 text-gold text-sm font-medium">{formatPrice(product.revenue)}</td>
                 </tr>
               ))}

@@ -97,21 +97,67 @@ router.get('/dashboard', requireAdmin, async (req, res) => {
 // GET /api/analytics/sales
 router.get('/sales', requireAdmin, async (req, res) => {
   try {
-    const { period = 'weekly' } = req.query;
+    // Accept both 'week/month/year' (frontend) and 'weekly/monthly/yearly' (legacy)
+    const rawPeriod = req.query.period || 'weekly';
+    const periodMap = { week: 'weekly', month: 'monthly', year: 'yearly' };
+    const period = periodMap[rawPeriod] || rawPeriod;
+
     const intervals = { daily: '24 hours', weekly: '7 days', monthly: '30 days', yearly: '365 days' };
     const truncs = { daily: 'hour', weekly: 'day', monthly: 'week', yearly: 'month' };
 
-    const result = await query(`
-      SELECT DATE_TRUNC('${truncs[period] || 'day'}', created_at) as period,
-        COUNT(*) as orders, COALESCE(SUM(total_amount),0) as revenue
-      FROM orders
-      WHERE created_at >= NOW() - INTERVAL '${intervals[period] || '7 days'}'
-        AND status NOT IN ('cancelled','refunded')
-      GROUP BY 1 ORDER BY 1 ASC
-    `);
+    const trunc = truncs[period] || 'day';
+    const interval = intervals[period] || '7 days';
 
-    res.json({ data: result.rows, period });
+    const [salesResult, statsResult, topProductsResult] = await Promise.all([
+      query(`
+        SELECT DATE_TRUNC('${trunc}', created_at) as date,
+          COUNT(*) as orders, COALESCE(SUM(total_amount),0) as revenue
+        FROM orders
+        WHERE created_at >= NOW() - INTERVAL '${interval}'
+          AND status NOT IN ('cancelled','refunded')
+        GROUP BY 1 ORDER BY 1 ASC
+      `),
+      query(`
+        SELECT
+          COALESCE(SUM(total_amount),0) as revenue,
+          COUNT(*) as orders,
+          (SELECT COUNT(DISTINCT user_id) FROM orders
+           WHERE created_at >= NOW() - INTERVAL '${interval}'
+             AND status NOT IN ('cancelled','refunded') AND user_id IS NOT NULL) as customers
+        FROM orders
+        WHERE created_at >= NOW() - INTERVAL '${interval}'
+          AND status NOT IN ('cancelled','refunded')
+      `),
+      query(`
+        SELECT p.id, p.name, p.slug,
+          SUM(oi.quantity) as sold,
+          COALESCE(SUM(oi.subtotal),0) as revenue,
+          (SELECT url FROM product_images WHERE product_id=p.id AND is_primary=true LIMIT 1) as image
+        FROM order_items oi
+        JOIN products p ON oi.product_id = p.id
+        JOIN orders o ON oi.order_id = o.id
+        WHERE o.created_at >= NOW() - INTERVAL '${interval}'
+          AND o.status NOT IN ('cancelled','refunded')
+        GROUP BY p.id, p.name, p.slug
+        ORDER BY sold DESC
+        LIMIT 5
+      `),
+    ]);
+
+    const s = statsResult.rows[0];
+    res.json({
+      salesData: salesResult.rows,
+      stats: {
+        revenue: parseFloat(s.revenue),
+        orders: parseInt(s.orders),
+        customers: parseInt(s.customers),
+        conversionRate: 0,
+      },
+      topProducts: topProductsResult.rows,
+      period,
+    });
   } catch (error) {
+    console.error(error);
     res.status(500).json({ error: 'Failed to fetch sales data' });
   }
 });

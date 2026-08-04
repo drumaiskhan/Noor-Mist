@@ -6,8 +6,8 @@ const { authenticate, requireAdmin, optionalAuth } = require('../middleware/auth
 const router = express.Router();
 
 // Build product query with filters
-function buildProductQuery(params) {
-  const conditions = ['p.is_visible = true'];
+function buildProductQuery(params, isAdmin = false) {
+  const conditions = isAdmin ? [] : ['p.is_visible = true'];
   const values = [];
   let idx = 1;
 
@@ -20,6 +20,10 @@ function buildProductQuery(params) {
   if (params.bestseller === 'true') { conditions.push('p.is_bestseller = true'); }
   if (params.new_arrival === 'true') { conditions.push('p.is_new_arrival = true'); }
   if (params.limited_edition === 'true') { conditions.push('p.is_limited_edition = true'); }
+  if (params.status && params.status !== 'all') {
+    conditions.push(`p.status = $${idx++}`);
+    values.push(params.status);
+  }
   if (params.search) {
     conditions.push(`(p.name ILIKE $${idx} OR p.brand ILIKE $${idx} OR p.description ILIKE $${idx})`);
     values.push(`%${params.search}%`);
@@ -51,7 +55,9 @@ router.get('/', optionalAuth, async (req, res) => {
     const limit = Math.min(parseInt(req.query.limit) || 24, 100);
     const offset = (page - 1) * limit;
 
-    const { conditions, values, orderBy, idx } = buildProductQuery(req.query);
+    // Admin requests can see all products regardless of visibility
+    const isAdmin = req.user?.role === 'admin';
+    const { conditions, values, orderBy, idx } = buildProductQuery(req.query, isAdmin);
     const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
 
     const countResult = await query(
@@ -62,10 +68,13 @@ router.get('/', optionalAuth, async (req, res) => {
 
     const result = await query(
       `SELECT p.*,
-        (SELECT json_agg(pi ORDER BY pi.position) FROM product_images pi WHERE pi.product_id = p.id) AS images,
+        c.name AS category_name,
+        (SELECT MIN(COALESCE(pv.sale_price, pv.price)) FROM product_variants pv WHERE pv.product_id = p.id AND pv.is_active = true) AS min_price,
+        (SELECT COALESCE(SUM(pv.quantity), 0) FROM product_variants pv WHERE pv.product_id = p.id AND pv.is_active = true) AS total_stock,
         (SELECT json_agg(pv ORDER BY pv.size_ml) FROM product_variants pv WHERE pv.product_id = p.id AND pv.is_active = true) AS variants,
         (SELECT json_agg(pi) FROM product_images pi WHERE pi.product_id = p.id AND pi.is_primary = true LIMIT 1) AS primary_image
        FROM products p
+       LEFT JOIN categories c ON p.category_id = c.id
        ${where}
        ORDER BY ${orderBy}
        LIMIT $${idx} OFFSET $${idx + 1}`,
@@ -263,6 +272,27 @@ router.post('/import-xml', requireAdmin, async (req, res) => {
   }
 });
 
+// GET /api/products/admin/:id — fetch a single product by numeric ID for admin editing
+router.get('/admin/:id', requireAdmin, async (req, res) => {
+  try {
+    const result = await query(
+      `SELECT p.*,
+        (SELECT json_agg(pi ORDER BY pi.position) FROM product_images pi WHERE pi.product_id = p.id) AS images,
+        (SELECT json_agg(pv ORDER BY pv.size_ml) FROM product_variants pv WHERE pv.product_id = p.id) AS variants,
+        c.name AS category_name, c.slug AS category_slug
+       FROM products p
+       LEFT JOIN categories c ON p.category_id = c.id
+       WHERE p.id = $1`,
+      [req.params.id]
+    );
+    if (!result.rows.length) return res.status(404).json({ error: 'Product not found' });
+    res.json({ product: result.rows[0] });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to fetch product' });
+  }
+});
+
 // GET /api/products/:slug
 router.get('/:slug', optionalAuth, async (req, res) => {
   try {
@@ -344,7 +374,10 @@ router.put('/:id', requireAdmin, async (req, res) => {
       gender, top_notes, middle_notes, base_notes, longevity, projection, season, occasion,
       category_id, collection_id, is_featured, is_bestseller, is_new_arrival,
       is_limited_edition, is_gift_set, is_visible, meta_title, meta_description,
+      variants, images,
     } = req.body;
+
+    const productId = req.params.id;
 
     const result = await query(
       `UPDATE products SET name=$1, description=$2, short_description=$3, brand=$4,
@@ -359,10 +392,54 @@ router.put('/:id', requireAdmin, async (req, res) => {
        season || [], occasion || [], category_id || null, collection_id || null,
        is_featured || false, is_bestseller || false, is_new_arrival !== false,
        is_limited_edition || false, is_gift_set || false, is_visible !== false,
-       meta_title, meta_description, req.params.id]
+       meta_title, meta_description, productId]
     );
 
     if (!result.rows.length) return res.status(404).json({ error: 'Product not found' });
+
+    // Upsert variants if provided
+    if (Array.isArray(variants)) {
+      for (const v of variants) {
+        if (v.id) {
+          // Update existing variant
+          await query(
+            `UPDATE product_variants SET size_ml=$1, price=$2, sale_price=$3, sku=$4,
+              quantity=$5, updated_at=NOW()
+             WHERE id=$6 AND product_id=$7`,
+            [v.size_ml, parseFloat(v.price) || 0, v.sale_price ? parseFloat(v.sale_price) : null,
+             v.sku || null, parseInt(v.quantity) || 0, v.id, productId]
+          );
+        } else {
+          // Insert new variant
+          const sku = v.sku || `${productId}-${v.size_ml}ML-${Date.now()}`;
+          await query(
+            `INSERT INTO product_variants (product_id, size_ml, price, sale_price, sku, quantity)
+             VALUES ($1,$2,$3,$4,$5,$6) ON CONFLICT (sku) DO UPDATE SET
+             size_ml=EXCLUDED.size_ml, price=EXCLUDED.price, sale_price=EXCLUDED.sale_price,
+             quantity=EXCLUDED.quantity, updated_at=NOW()`,
+            [productId, v.size_ml, parseFloat(v.price) || 0,
+             v.sale_price ? parseFloat(v.sale_price) : null,
+             sku, parseInt(v.quantity) || 0]
+          );
+        }
+      }
+    }
+
+    // Sync images if provided: insert any new image URLs not already in the DB
+    if (Array.isArray(images) && images.length > 0) {
+      for (let i = 0; i < images.length; i++) {
+        const img = images[i];
+        const url = img.url || img;
+        if (!url) continue;
+        await query(
+          `INSERT INTO product_images (product_id, url, public_id, is_primary, position)
+           VALUES ($1,$2,$3,$4,$5)
+           ON CONFLICT DO NOTHING`,
+          [productId, url, img.public_id || null, i === 0, i]
+        ).catch(() => {}); // ignore conflicts gracefully
+      }
+    }
+
     res.json({ product: result.rows[0] });
   } catch (error) {
     console.error(error);
