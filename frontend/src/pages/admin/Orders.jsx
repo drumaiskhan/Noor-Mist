@@ -348,7 +348,9 @@ export default function Orders() {
 
                 {/* Quick Status Update + Delete */}
                 <div className="flex flex-wrap items-center gap-2 mt-4 pt-4 border-t border-gray-800" onClick={(e) => e.stopPropagation()}>
-                  {ORDER_STATUSES.filter(s => s.value !== order.status).slice(0, 3).map((status) => (
+                  {ORDER_STATUSES
+  .filter(s => s.value !== order.status)
+  .map((status) => (
                     <button
                       key={status.value}
                       onClick={() => handleStatusChange(order.id, status.value)}
