@@ -66,91 +66,88 @@ router.get('/', optionalAuth, async (req, res) => {
 `
 SELECT
 
-    p.*,
-
-    c.name AS category_name,
-    c.slug AS category_slug,
+p.*,
 
 
-    -- Lowest product price from variants
-    COALESCE(
-        (
-            SELECT MIN(COALESCE(pv.sale_price,pv.price))
-            FROM product_variants pv
-            WHERE pv.product_id = p.id
-            AND pv.is_active = true
-        ),
-        0
-    ) AS price,
+-- Category name
+c.name AS category_name,
 
 
-    -- Total available stock
-    COALESCE(
-        (
-            SELECT SUM(pv.quantity)
-            FROM product_variants pv
-            WHERE pv.product_id = p.id
-            AND pv.is_active = true
-        ),
-        0
-    ) AS stock,
+-- Minimum product price
+(
+  SELECT MIN(COALESCE(pv.sale_price,pv.price))
+  FROM product_variants pv
+  WHERE pv.product_id = p.id
+  AND pv.is_active = true
+) AS min_price,
 
 
-    -- Sales count
-    COALESCE(
-        p.total_sold,
-        0
-    ) AS sales,
+-- Total available stock
+(
+  SELECT COALESCE(SUM(pv.quantity),0)
+  FROM product_variants pv
+  WHERE pv.product_id = p.id
+  AND pv.is_active = true
+) AS total_stock,
 
 
-    -- Rating
-    COALESCE(
-        p.average_rating,
-        0
-    ) AS rating,
+-- Total sales
+(
+  SELECT COALESCE(SUM(oi.quantity),0)
+  FROM order_items oi
+  WHERE oi.product_id = p.id
+) AS total_sold,
 
 
-    -- Variant count
-    (
-        SELECT COUNT(*)
-        FROM product_variants pv
-        WHERE pv.product_id = p.id
-        AND pv.is_active = true
-    ) AS variant_count,
+-- Rating
+COALESCE(p.average_rating,0) AS average_rating,
 
 
-    -- Images
-    (
-        SELECT json_agg(pi ORDER BY pi.position)
-        FROM product_images pi
-        WHERE pi.product_id = p.id
-    ) AS images,
+-- Status
+CASE
+ WHEN p.is_visible = true
+ THEN 'published'
+ ELSE 'draft'
+END AS status,
 
 
-    -- Variants
-    (
-        SELECT json_agg(pv ORDER BY pv.size_ml)
-        FROM product_variants pv
-        WHERE pv.product_id = p.id
-        AND pv.is_active = true
-    ) AS variants,
+
+-- Images
+(
+ SELECT json_agg(pi ORDER BY pi.position)
+ FROM product_images pi
+ WHERE pi.product_id=p.id
+) AS images,
 
 
-    -- Main image
-    (
-        SELECT json_agg(pi)
-        FROM product_images pi
-        WHERE pi.product_id = p.id
-        AND pi.is_primary = true
-        LIMIT 1
-    ) AS primary_image
+
+-- Variants
+(
+ SELECT json_agg(pv ORDER BY pv.size_ml)
+ FROM product_variants pv
+ WHERE pv.product_id=p.id
+ AND pv.is_active=true
+) AS variants,
+
+
+
+-- Primary image
+(
+ SELECT json_agg(pi)
+ FROM product_images pi
+ WHERE pi.product_id=p.id
+ AND pi.is_primary=true
+ LIMIT 1
+) AS primary_image
+
 
 
 FROM products p
 
 
 LEFT JOIN categories c
-ON c.id = p.category_id
+ON c.id=p.category_id
+
 
 
 ${where}
@@ -163,58 +160,40 @@ LIMIT $${idx}
 OFFSET $${idx + 1}
 
 `,
-      [
-        ...values,
-        limit,
-        offset
-      ]
-    );
+[
+...values,
+limit,
+offset
+]
+);
 
 
-    res.json({
 
-      products: result.rows,
+res.json({
 
-      total,
+products: result.rows,
 
-      page,
+total,
 
-      pages: Math.ceil(total / limit),
+page,
 
-      limit
+pages: Math.ceil(total / limit),
 
-    });
+limit
+
+});
 
 
-  } catch (error) {
+  } catch(error) {
 
-    console.error("PRODUCT FETCH ERROR:", error);
+    console.error("PRODUCT FETCH ERROR:",error);
 
     res.status(500).json({
-
-      error: "Failed to fetch products"
-
+      error:"Failed to fetch products"
     });
 
   }
 });
-
-// ── XML helpers ──────────────────────────────────────────────────────────────
-function esc(v) {
-  return String(v ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
-function xmlTag(tag, val) { return `<${tag}>${esc(val)}</${tag}>`; }
-function getTag(xml, tag) {
-  const m = xml.match(new RegExp(`<${tag}>([\\s\\S]*?)<\\/${tag}>`));
-  return m ? m[1].trim() : '';
-}
-function getAllTags(xml, tag) {
-  const re = new RegExp(`<${tag}>([\\s\\S]*?)<\\/${tag}>`, 'g');
-  const out = []; let m;
-  while ((m = re.exec(xml)) !== null) out.push(m[1].trim());
-  return out;
-}
-
 // GET /api/products/export-xml (admin)
 router.get('/export-xml', requireAdmin, async (req, res) => {
   try {
