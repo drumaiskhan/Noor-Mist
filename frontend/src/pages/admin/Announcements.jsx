@@ -3,89 +3,192 @@ import { motion } from "framer-motion";
 import {
   HiPlus,
   HiTrash,
-  HiPencil,
   HiBell,
-  HiX
+  HiX,
+  HiCheck
 } from "react-icons/hi";
+
+import {
+  useQuery,
+  useMutation,
+  useQueryClient
+} from "@tanstack/react-query";
+
+import { announcementsAPI } from "../../services/api";
+
 
 
 export default function Announcements() {
 
+
+  const queryClient = useQueryClient();
+
+
   const [showForm, setShowForm] = useState(false);
 
-  const [announcements, setAnnouncements] = useState([
-    {
-      id: 1,
-      title: "Summer Sale",
-      description: "Get 20% OFF on selected perfumes",
-      image_url: "",
-      button_text: "Shop Now",
-      is_active: true
-    }
-  ]);
 
 
   const [form, setForm] = useState({
+
     title: "",
     description: "",
     image_url: "",
     button_text: "Shop Now",
     button_link: "/products",
-    is_active: true
+    is_active: true,
+    start_date: "",
+    end_date: ""
+
   });
+
+
+
+
+
+  // Fetch announcements
+
+  const {
+    data,
+    isLoading
+  } = useQuery({
+
+    queryKey: ["announcements"],
+
+    queryFn: async () => {
+
+      const res = await announcementsAPI.getAll();
+
+      return res.data;
+
+    }
+
+  });
+
+
+
+  const announcements = data || [];
+
+
+
+
+
+
+
+  // Create
+
+  const createMutation = useMutation({
+
+    mutationFn: (data) =>
+      announcementsAPI.create(data),
+
+
+    onSuccess: () => {
+
+      queryClient.invalidateQueries([
+        "announcements"
+      ]);
+
+
+      setShowForm(false);
+
+
+      setForm({
+
+        title: "",
+        description: "",
+        image_url: "",
+        button_text: "Shop Now",
+        button_link: "/products",
+        is_active: true,
+        start_date: "",
+        end_date: ""
+
+      });
+
+    }
+
+  });
+
+
+
+
+
+
+
+  // Delete
+
+  const deleteMutation = useMutation({
+
+    mutationFn: (id) =>
+      announcementsAPI.delete(id),
+
+
+    onSuccess: () => {
+
+      queryClient.invalidateQueries([
+        "announcements"
+      ]);
+
+    }
+
+  });
+
+
+
+
 
 
 
   const handleChange = (e) => {
 
     setForm({
+
       ...form,
+
       [e.target.name]: e.target.value
+
     });
 
   };
 
 
 
-  const addAnnouncement = () => {
-
-    if (!form.title) return;
 
 
-    setAnnouncements([
-      ...announcements,
-      {
-        id: Date.now(),
-        ...form
-      }
-    ]);
 
 
-    setForm({
-      title:"",
-      description:"",
-      image_url:"",
-      button_text:"Shop Now",
-      button_link:"/products",
-      is_active:true
-    });
+  const handleSubmit = () => {
+
+    if (!form.title.trim()) return;
 
 
-    setShowForm(false);
+    createMutation.mutate(form);
 
   };
 
 
 
-  const deleteAnnouncement = (id) => {
 
-    setAnnouncements(
-      announcements.filter(
-        item => item.id !== id
-      )
+
+
+
+  if (isLoading) {
+
+    return (
+
+      <div className="p-6 text-white">
+
+        Loading announcements...
+
+      </div>
+
     );
 
-  };
+  }
+
+
+
+
 
 
 
@@ -95,36 +198,45 @@ export default function Announcements() {
     <div className="p-6 text-white">
 
 
+
       {/* Header */}
 
       <div className="
-        flex 
-        justify-between 
-        items-center 
+        flex
+        justify-between
+        items-center
         mb-8
       ">
 
 
         <div>
 
+
           <h1 className="
-            text-3xl 
-            font-playfair 
+            text-3xl
+            font-playfair
             font-bold
           ">
+
             Announcements
+
           </h1>
 
 
+
           <p className="
-            text-gray-400 
+            text-gray-400
             mt-2
           ">
-            Manage website popup offers and promotions
+
+            Manage popup offers and promotions
+
           </p>
 
 
         </div>
+
+
 
 
 
@@ -133,8 +245,8 @@ export default function Announcements() {
           onClick={() => setShowForm(true)}
 
           className="
-            flex 
-            items-center 
+            flex
+            items-center
             gap-2
             bg-gold
             text-black
@@ -146,12 +258,12 @@ export default function Announcements() {
 
         >
 
-          <HiPlus />
+          <HiPlus/>
 
           Add Announcement
 
-        </button>
 
+        </button>
 
 
       </div>
@@ -162,10 +274,13 @@ export default function Announcements() {
 
 
 
-      {/* Create Form */}
+
+
+      {/* Add Form */}
 
 
       {showForm && (
+
 
         <motion.div
 
@@ -191,23 +306,28 @@ export default function Announcements() {
         >
 
 
+
           <div className="
             flex
             justify-between
             mb-5
           ">
 
-            <h2 className="
-              text-xl
-              font-semibold
-            ">
-              New Announcement
+
+            <h2 className="text-xl font-semibold">
+
+              Create Announcement
+
             </h2>
 
 
+
             <button
+
               onClick={() => setShowForm(false)}
-              className="text-gray-400 hover:text-white"
+
+              className="text-gray-400"
+
             >
 
               <HiX size={22}/>
@@ -222,27 +342,30 @@ export default function Announcements() {
 
 
 
+
           <input
 
             name="title"
+
+            placeholder="Offer title"
 
             value={form.title}
 
             onChange={handleChange}
 
-            placeholder="Offer title"
-
             className="
               w-full
-              mb-3
               bg-black
               border
               border-gray-700
               rounded-xl
               p-3
+              mb-3
             "
 
           />
+
+
 
 
 
@@ -251,23 +374,24 @@ export default function Announcements() {
 
             name="description"
 
+            placeholder="Description"
+
             value={form.description}
 
             onChange={handleChange}
 
-            placeholder="Offer description"
-
             className="
               w-full
-              mb-3
               bg-black
               border
               border-gray-700
               rounded-xl
               p-3
+              mb-3
             "
 
           />
+
 
 
 
@@ -278,23 +402,26 @@ export default function Announcements() {
 
             name="image_url"
 
+            placeholder="Offer image URL"
+
             value={form.image_url}
 
             onChange={handleChange}
 
-            placeholder="Image URL"
-
             className="
               w-full
-              mb-3
               bg-black
               border
               border-gray-700
               rounded-xl
               p-3
+              mb-3
             "
 
           />
+
+
+
 
 
 
@@ -304,20 +431,20 @@ export default function Announcements() {
 
             name="button_text"
 
+            placeholder="Button text"
+
             value={form.button_text}
 
             onChange={handleChange}
 
-            placeholder="Button text"
-
             className="
               w-full
-              mb-5
               bg-black
               border
               border-gray-700
               rounded-xl
               p-3
+              mb-5
             "
 
           />
@@ -326,9 +453,11 @@ export default function Announcements() {
 
 
 
+
+
           <button
 
-            onClick={addAnnouncement}
+            onClick={handleSubmit}
 
             className="
               bg-gold
@@ -349,6 +478,7 @@ export default function Announcements() {
 
         </motion.div>
 
+
       )}
 
 
@@ -359,19 +489,23 @@ export default function Announcements() {
 
 
 
-      {/* Announcement List */}
+      {/* List */}
 
 
       <div className="space-y-5">
+
 
 
         {
           announcements.map((item)=>(
 
 
+
             <motion.div
 
+
               key={item.id}
+
 
               initial={{
                 opacity:0
@@ -380,6 +514,7 @@ export default function Announcements() {
               animate={{
                 opacity:1
               }}
+
 
               className="
                 bg-noir-card
@@ -392,7 +527,9 @@ export default function Announcements() {
                 items-center
               "
 
+
             >
+
 
 
 
@@ -401,6 +538,7 @@ export default function Announcements() {
                 items-center
                 gap-4
               ">
+
 
 
                 <div className="
@@ -413,12 +551,15 @@ export default function Announcements() {
                   justify-center
                 ">
 
-                  <HiBell 
+
+                  <HiBell
                     className="text-gold"
                     size={25}
                   />
 
+
                 </div>
+
 
 
 
@@ -426,26 +567,40 @@ export default function Announcements() {
 
                 <div>
 
-                  <h3 className="
-                    font-semibold
-                    text-lg
-                  ">
+
+                  <h3 className="font-semibold text-lg">
 
                     {item.title}
 
                   </h3>
 
 
-                  <p className="
-                    text-gray-400
-                  ">
+
+                  <p className="text-gray-400">
 
                     {item.description}
 
                   </p>
 
 
+
+                  <span className="
+                    text-xs
+                    text-gray-500
+                  ">
+
+
+                    {item.is_active
+                      ? "Active"
+                      : "Disabled"
+                    }
+
+
+                  </span>
+
+
                 </div>
+
 
 
               </div>
@@ -456,9 +611,12 @@ export default function Announcements() {
 
 
 
+
               <button
 
-                onClick={() => deleteAnnouncement(item.id)}
+                onClick={() =>
+                  deleteMutation.mutate(item.id)
+                }
 
                 className="
                   text-red-400
@@ -469,6 +627,7 @@ export default function Announcements() {
 
                 <HiTrash size={22}/>
 
+
               </button>
 
 
@@ -476,11 +635,32 @@ export default function Announcements() {
             </motion.div>
 
 
+
           ))
         }
 
 
+
+        {
+          announcements.length === 0 && (
+
+            <div className="
+              text-gray-400
+              text-center
+              py-10
+            ">
+
+              No announcements yet
+
+            </div>
+
+          )
+        }
+
+
+
       </div>
+
 
 
     </div>
