@@ -8,11 +8,14 @@ import {
 import { announcementsAPI } from "../../services/api";
 
 export default function AnnouncementPopup() {
+
   const [announcements, setAnnouncements] = useState([]);
   const [current, setCurrent] = useState(0);
   const [visible, setVisible] = useState(false);
 
+
   useEffect(() => {
+
     const closed = sessionStorage.getItem(
       "noor_mist_announcement_closed"
     );
@@ -20,29 +23,46 @@ export default function AnnouncementPopup() {
     if (closed) return;
 
     loadAnnouncements();
+
   }, []);
 
+
+
   const loadAnnouncements = async () => {
+
     try {
+
       const { data } = await announcementsAPI.getActive();
 
       console.log("Announcements:", data);
 
+
       if (Array.isArray(data) && data.length > 0) {
+
         setAnnouncements(data);
+
         setVisible(true);
+
       }
 
+
     } catch (err) {
+
       console.error(
         "Announcement loading failed:",
         err
       );
+
     }
+
   };
 
 
-  // Auto change announcements
+
+
+
+  // Auto slider
+
   useEffect(() => {
 
     if (announcements.length <= 1)
@@ -59,9 +79,14 @@ export default function AnnouncementPopup() {
     }, 5000);
 
 
+
     return () => clearInterval(timer);
 
+
   }, [announcements]);
+
+
+
 
 
 
@@ -70,12 +95,15 @@ export default function AnnouncementPopup() {
 
     setVisible(false);
 
+
     sessionStorage.setItem(
       "noor_mist_announcement_closed",
       "true"
     );
 
   };
+
+
 
 
 
@@ -91,6 +119,8 @@ export default function AnnouncementPopup() {
 
 
 
+
+
   const previous = () => {
 
     setCurrent(
@@ -103,8 +133,14 @@ export default function AnnouncementPopup() {
 
 
 
+
+
+
+
   if (!visible || announcements.length === 0)
     return null;
+
+
 
 
 
@@ -113,32 +149,37 @@ export default function AnnouncementPopup() {
 
 
 
+
+
+
   return (
 
     <AnimatePresence>
 
+
       {visible && (
+
 
         <motion.div
 
           initial={{
-            opacity: 0
+            opacity:0
           }}
 
           animate={{
-            opacity: 1
+            opacity:1
           }}
 
           exit={{
-            opacity: 0
+            opacity:0
           }}
 
           className="
             fixed
             inset-0
             z-[9999]
-            bg-black/70
-            backdrop-blur-sm
+            bg-black/80
+            backdrop-blur-md
             flex
             items-center
             justify-center
@@ -148,11 +189,14 @@ export default function AnnouncementPopup() {
         >
 
 
+
+
+
           <motion.div
 
             initial={{
-              scale:0.9,
-              y:30
+              scale:0.85,
+              y:40
             }}
 
             animate={{
@@ -161,13 +205,18 @@ export default function AnnouncementPopup() {
             }}
 
             exit={{
-              scale:0.9
+              scale:0.85
             }}
+
+            transition={{
+              duration:0.3
+            }}
+
 
             className="
               relative
               w-full
-              max-w-xl
+              max-w-2xl
               bg-noir
               rounded-3xl
               overflow-hidden
@@ -179,7 +228,11 @@ export default function AnnouncementPopup() {
           >
 
 
-            {/* Close */}
+
+
+
+
+            {/* Close Button */}
 
             <button
 
@@ -187,19 +240,20 @@ export default function AnnouncementPopup() {
 
               className="
                 absolute
-                top-4
-                right-4
-                z-20
+                top-5
+                right-5
+                z-30
                 bg-black/70
                 rounded-full
                 p-2
                 text-white
                 hover:text-gold
+                transition
               "
 
             >
 
-              <HiX size={24}/>
+              <HiX size={26}/>
 
             </button>
 
@@ -207,32 +261,54 @@ export default function AnnouncementPopup() {
 
 
 
-            {/* Cloudinary Image */}
+
+
+
+
+            {/* Full Image */}
 
             {announcement.image_url && (
 
-              <img
 
-                src={announcement.image_url}
-
-                alt={announcement.title}
+              <div
 
                 className="
                   w-full
-                  h-72
-                  object-cover
+                  h-[450px]
+                  bg-black
+                  overflow-hidden
                 "
 
-                onError={() => {
+              >
 
-                  console.log(
-                    "Broken image URL:",
-                    announcement.image_url
-                  );
 
-                }}
+                <img
 
-              />
+                  src={announcement.image_url}
+
+                  alt={announcement.title}
+
+                  className="
+                    w-full
+                    h-full
+                    object-cover
+                  "
+
+
+                  onError={() => {
+
+                    console.log(
+                      "Broken image URL:",
+                      announcement.image_url
+                    );
+
+                  }}
+
+                />
+
+
+              </div>
+
 
             )}
 
@@ -240,7 +316,17 @@ export default function AnnouncementPopup() {
 
 
 
+
+
+
+
+            {/* Content */}
+
+
             <div className="p-8 text-center">
+
+
+
 
 
               <h2 className="
@@ -258,20 +344,33 @@ export default function AnnouncementPopup() {
 
 
 
-              <p className="
-                text-gray-300
-                leading-relaxed
-                mb-6
-              ">
 
-                {announcement.description}
 
-              </p>
+
+              {announcement.description && (
+
+                <p className="
+                  text-gray-300
+                  leading-relaxed
+                  mb-6
+                ">
+
+                  {announcement.description}
+
+                </p>
+
+              )}
+
+
+
+
+
 
 
 
 
               {announcement.button_text && (
+
 
                 <a
 
@@ -297,6 +396,7 @@ export default function AnnouncementPopup() {
 
                 </a>
 
+
               )}
 
 
@@ -304,7 +404,11 @@ export default function AnnouncementPopup() {
 
 
 
+
+
+
               {announcements.length > 1 && (
+
 
                 <div className="
                   flex
@@ -314,22 +418,26 @@ export default function AnnouncementPopup() {
                 ">
 
 
+
                   <button
 
                     onClick={previous}
 
                     className="
-                      p-2
+                      p-3
                       rounded-full
                       bg-gold/10
                       text-gold
+                      hover:bg-gold/20
                     "
 
                   >
 
-                    <HiChevronLeft size={24}/>
+                    <HiChevronLeft size={26}/>
 
                   </button>
+
+
 
 
 
@@ -350,39 +458,59 @@ export default function AnnouncementPopup() {
 
 
 
+
+
                   <button
 
                     onClick={next}
 
                     className="
-                      p-2
+                      p-3
                       rounded-full
                       bg-gold/10
                       text-gold
+                      hover:bg-gold/20
                     "
 
                   >
 
-                    <HiChevronRight size={24}/>
+                    <HiChevronRight size={26}/>
 
                   </button>
 
 
+
+
+
                 </div>
 
+
               )}
+
+
+
+
 
 
 
             </div>
 
 
+
+
+
+
           </motion.div>
+
+
+
 
 
         </motion.div>
 
+
       )}
+
 
     </AnimatePresence>
 
