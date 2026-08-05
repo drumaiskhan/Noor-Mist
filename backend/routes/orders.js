@@ -62,8 +62,15 @@ router.post('/', optionalAuth, async (req, res) => {
       }
     }
 
-    const shippingThreshold = 5000;
-    const shippingRate = 200;
+    const settingsResult = await query(
+      "SELECT key, value FROM settings WHERE key IN ('shipping_rate', 'free_shipping_threshold')"
+    );
+    const settingsMap = {};
+    settingsResult.rows.forEach((row) => { settingsMap[row.key] = row.value; });
+    const shippingThreshold = settingsMap.free_shipping_threshold !== undefined
+      ? parseFloat(settingsMap.free_shipping_threshold) : 5000;
+    const shippingRate = settingsMap.shipping_rate !== undefined
+      ? parseFloat(settingsMap.shipping_rate) : 200;
     const shippingAmount = subtotal >= shippingThreshold ? 0 : shippingRate;
     const total = subtotal - discountAmount + shippingAmount;
 
