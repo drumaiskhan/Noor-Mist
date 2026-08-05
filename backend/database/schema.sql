@@ -38,6 +38,7 @@ CREATE TABLE IF NOT EXISTS collections (
   description TEXT,
   image_url TEXT,
   banner_url TEXT,
+  gender VARCHAR(20),
   show_on_homepage BOOLEAN DEFAULT false,
   is_active BOOLEAN DEFAULT true,
   meta_title VARCHAR(255),
