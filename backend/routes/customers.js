@@ -10,23 +10,28 @@ router.get('/', requireAdmin, async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 20;
     const offset = (page - 1) * limit;
+    const search = (req.query.search || '').trim();
+    const searchParam = search ? [`%${search}%`] : [];
 
-    const countResult = await query("SELECT COUNT(*) FROM users WHERE role='customer'");
+    const countResult = await query(
+      `SELECT COUNT(*) FROM users u WHERE u.role='customer' ${search ? "AND (u.email ILIKE $1 OR u.first_name ILIKE $1 OR u.last_name ILIKE $1 OR u.phone ILIKE $1)" : ''}`,
+      searchParam
+    );
     const result = await query(
       `SELECT u.id, u.email, u.first_name, u.last_name, u.phone, u.is_active, u.created_at,
         COUNT(DISTINCT o.id) as order_count,
         COALESCE(SUM(o.total_amount) FILTER (WHERE o.status NOT IN ('cancelled','refunded')),0) as total_spent
        FROM users u
        LEFT JOIN orders o ON u.id = o.user_id
-       WHERE u.role = 'customer'
+       WHERE u.role = 'customer' ${search ? "AND (u.email ILIKE $3 OR u.first_name ILIKE $3 OR u.last_name ILIKE $3 OR u.phone ILIKE $3)" : ''}
        GROUP BY u.id
        ORDER BY u.created_at DESC
        LIMIT $1 OFFSET $2`,
-      [limit, offset]
+      [limit, offset, ...searchParam]
     );
 
     res.json({
-      customers: result.rows,
+      users: result.rows,
       total: parseInt(countResult.rows[0].count),
       page,
       pages: Math.ceil(parseInt(countResult.rows[0].count) / limit),
