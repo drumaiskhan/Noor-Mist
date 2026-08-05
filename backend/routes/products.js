@@ -16,6 +16,18 @@ function buildProductQuery(params) {
   if (params.concentration) { conditions.push(`p.concentration = $${idx++}`); values.push(params.concentration); }
   if (params.category_id) { conditions.push(`p.category_id = $${idx++}`); values.push(params.category_id); }
   if (params.collection_id) { conditions.push(`p.collection_id = $${idx++}`); values.push(params.collection_id); }
+  if (params.collection) {
+    // Shop.jsx passes the collection's slug (not its id). A collection can also
+    // carry a gender tag (e.g. "Men's Collection"), in which case it should
+    // automatically include every product of that gender — not just the ones
+    // an admin manually assigned to it via collection_id.
+    conditions.push(`(
+      p.collection_id = (SELECT id FROM collections WHERE slug = $${idx})
+      OR p.gender = (SELECT gender FROM collections WHERE slug = $${idx} AND gender IS NOT NULL)
+    )`);
+    values.push(params.collection);
+    idx += 1;
+  }
   if (params.featured === 'true') { conditions.push('p.is_featured = true'); }
   if (params.bestseller === 'true') { conditions.push('p.is_bestseller = true'); }
   if (params.new_arrival === 'true') { conditions.push('p.is_new_arrival = true'); }
