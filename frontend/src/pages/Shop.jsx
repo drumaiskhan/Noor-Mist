@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { useQuery } from '@tanstack/react-query';
 import { HiFilter, HiSearch } from 'react-icons/hi';
-import { productAPI } from '../services/api';
+import { productAPI, collectionsAPI } from '../services/api';
 import FilterPanel from '../components/Shop/FilterPanel';
 import MobileFilters from '../components/Shop/MobileFilters';
 import ProductGrid from '../components/Shop/ProductGrid';
@@ -23,16 +23,33 @@ export default function Shop() {
     season: searchParams.get('season') || '',
     minPrice: searchParams.get('minPrice') || '',
     maxPrice: searchParams.get('maxPrice') || '',
+    // Set when arriving from a collection tile or an announcement's
+    // "Shop Now" button (?collection=<slug>) - kept separate from the
+    // FilterPanel filters below since it isn't shown/cleared there.
+    collection: searchParams.get('collection') || '',
   });
 
   const [sort, setSort] = useState(searchParams.get('sort') || 'newest');
   const [page, setPage] = useState(1);
 
-  // Sync search param from URL (e.g. when SearchBar navigates here)
+  // Sync search + collection params from URL (e.g. when navigated here from
+  // the SearchBar, a collection tile, or an announcement popup button)
   useEffect(() => {
     const s = searchParams.get('search') || '';
     setSearch(s);
+    const collection = searchParams.get('collection') || '';
+    setFilters((prev) => (prev.collection === collection ? prev : { ...prev, collection }));
+    setPage(1);
   }, [searchParams]);
+
+  // Look up the active collection's display name for the page heading.
+  const { data: collectionsData } = useQuery({
+    queryKey: ['collectionsForShop'],
+    queryFn: collectionsAPI.getAll,
+    enabled: !!filters.collection,
+  });
+  const activeCollection = (collectionsData?.data?.collections || collectionsData?.data || [])
+    .find((c) => c.slug === filters.collection);
 
   const { data, isLoading } = useQuery({
     queryKey: ['products', filters, sort, page, search],
@@ -76,10 +93,25 @@ export default function Shop() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-16">
         {/* Header */}
         <div className="text-center mb-10">
-          <h1 className="section-title">Shop Perfumes</h1>
+          <h1 className="section-title">
+            {activeCollection ? activeCollection.name : 'Shop Perfumes'}
+          </h1>
           <p className="section-subtitle">
-            Discover our curated collection of luxury fragrances
+            {activeCollection?.description || 'Discover our curated collection of luxury fragrances'}
           </p>
+          {filters.collection && (
+            <button
+              type="button"
+              onClick={() => {
+                const params = new URLSearchParams(searchParams);
+                params.delete('collection');
+                setSearchParams(params);
+              }}
+              className="mt-3 text-sm text-gold hover:underline"
+            >
+              Clear collection filter
+            </button>
+          )}
         </div>
 
         <div className="flex gap-8">
