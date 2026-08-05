@@ -115,6 +115,9 @@ async function initDatabase() {
     await query(`ALTER TABLE reviews ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'pending'`);
     await query(`UPDATE reviews SET status = 'approved' WHERE is_approved = true AND status = 'pending'`);
 
+    // Gender-targeted collections (e.g. "Men's", "Women's") — migration for existing DBs
+    await query(`ALTER TABLE collections ADD COLUMN IF NOT EXISTS gender VARCHAR(20)`);
+
     // Check if admin exists
     const adminCheck = await query("SELECT id FROM users WHERE role = 'admin' LIMIT 1");
     if (!adminCheck.rows.length) {
