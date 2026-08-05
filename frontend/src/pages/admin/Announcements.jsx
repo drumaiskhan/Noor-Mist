@@ -18,6 +18,7 @@ import toast from "react-hot-toast";
 
 import {
   announcementsAPI,
+  collectionsAPI,
   uploadAPI,
 } from "../../services/api";
 
@@ -30,6 +31,24 @@ const emptyForm = {
   is_active: true,
   start_date: "",
   end_date: "",
+};
+
+// The "Shop Now" button's destination. "all" and "collection" both compute
+// button_link automatically (/shop or /shop?collection=<slug>) so the admin
+// never has to hand-type a URL; "custom" leaves button_link free-text for
+// anything else (a specific product, an external page, etc).
+const linkTypeFromLink = (link, collections) => {
+  if (!link || link === "/shop") return "all";
+  const match = link.match(/^\/shop\?collection=([^&]+)$/);
+  if (match && collections.some((c) => c.slug === match[1])) {
+    return "collection";
+  }
+  return "custom";
+};
+
+const collectionSlugFromLink = (link) => {
+  const match = (link || "").match(/^\/shop\?collection=([^&]+)$/);
+  return match ? match[1] : "";
 };
 
 // Converts a value from the DB (ISO timestamp string or null) into the
@@ -67,6 +86,9 @@ export default function Announcements() {
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(emptyForm);
   const [uploading, setUploading] = useState(false);
+  // "all" | "collection" | "custom" - see linkTypeFromLink above
+  const [linkType, setLinkType] = useState("all");
+  const [linkCollection, setLinkCollection] = useState("");
 
   const { data, isLoading } = useQuery({
     queryKey: ["announcements"],
@@ -76,7 +98,16 @@ export default function Announcements() {
     },
   });
 
+  const { data: collectionsData } = useQuery({
+    queryKey: ["adminCollectionsForAnnouncements"],
+    queryFn: async () => {
+      const res = await collectionsAPI.getAll();
+      return res.data.collections ?? [];
+    },
+  });
+
   const announcements = data || [];
+  const collections = collectionsData || [];
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ["announcements"] });
@@ -87,8 +118,30 @@ export default function Announcements() {
 
   const closeForm = () => {
     setForm(emptyForm);
+    setLinkType("all");
+    setLinkCollection("");
     setShowForm(false);
     setEditingId(null);
+  };
+
+  // Recompute button_link whenever the destination type or chosen
+  // collection changes, so the field always matches what's picked.
+  const applyLinkType = (type, collectionSlug = linkCollection) => {
+    setLinkType(type);
+    if (type === "all") {
+      setForm((prev) => ({ ...prev, button_link: "/shop" }));
+    } else if (type === "collection" && collectionSlug) {
+      setForm((prev) => ({ ...prev, button_link: `/shop?collection=${collectionSlug}` }));
+    }
+    // "custom" leaves form.button_link as whatever is already typed in.
+  };
+
+  const handleLinkCollectionChange = (e) => {
+    const slug = e.target.value;
+    setLinkCollection(slug);
+    if (slug) {
+      setForm((prev) => ({ ...prev, button_link: `/shop?collection=${slug}` }));
+    }
   };
 
   const createMutation = useMutation({
@@ -177,12 +230,19 @@ export default function Announcements() {
       start_date: toDatetimeLocal(item.start_date),
       end_date: toDatetimeLocal(item.end_date),
     });
+    setLinkType(linkTypeFromLink(item.button_link, collections));
+    setLinkCollection(collectionSlugFromLink(item.button_link));
     setShowForm(true);
   };
 
   const handleSubmit = () => {
     if (!form.title.trim()) {
       toast.error("Title required");
+      return;
+    }
+
+    if (linkType === "collection" && !linkCollection) {
+      toast.error("Select a collection for the Shop Now button");
       return;
     }
 
@@ -226,6 +286,8 @@ export default function Announcements() {
         <button
           onClick={() => {
             setForm(emptyForm);
+            setLinkType("all");
+            setLinkCollection("");
             setEditingId(null);
             setShowForm(true);
           }}
@@ -298,13 +360,41 @@ export default function Announcements() {
             className="w-full bg-black border border-gray-700 rounded-xl p-3 mb-4"
           />
 
-          <input
-            name="button_link"
-            placeholder="Button link"
-            value={form.button_link}
-            onChange={handleChange}
-            className="w-full bg-black border border-gray-700 rounded-xl p-3 mb-4"
-          />
+          <label className="block text-sm text-gray-400 mb-1">
+            "Shop Now" goes to
+          </label>
+          <select
+            value={linkType}
+            onChange={(e) => applyLinkType(e.target.value)}
+            className="w-full bg-black border border-gray-700 rounded-xl p-3 mb-3"
+          >
+            <option value="all">All Products (/shop)</option>
+            <option value="collection">A specific collection</option>
+            <option value="custom">Custom link</option>
+          </select>
+
+          {linkType === "collection" && (
+            <select
+              value={linkCollection}
+              onChange={handleLinkCollectionChange}
+              className="w-full bg-black border border-gray-700 rounded-xl p-3 mb-4"
+            >
+              <option value="">Select a collection…</option>
+              {collections.map((col) => (
+                <option key={col.id} value={col.slug}>{col.name}</option>
+              ))}
+            </select>
+          )}
+
+          {linkType === "custom" && (
+            <input
+              name="button_link"
+              placeholder="e.g. /product/royal-oud or https://..."
+              value={form.button_link}
+              onChange={handleChange}
+              className="w-full bg-black border border-gray-700 rounded-xl p-3 mb-4"
+            />
+          )}
 
           {/* SCHEDULE: start / end date so the popup auto-enables and
               auto-expires without an admin needing to remember to toggle
