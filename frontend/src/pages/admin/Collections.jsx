@@ -18,6 +18,7 @@ const EMPTY_FORM = () => ({
   description: '',
   image_url: '',
   banner_url: '',
+  gender: '',
   show_on_homepage: false,
   is_active: true,
   meta_title: '',
@@ -159,6 +160,7 @@ export default function Collections() {
       description: col.description || '',
       image_url: col.image_url || '',
       banner_url: col.banner_url || '',
+      gender: col.gender || '',
       show_on_homepage: col.show_on_homepage || false,
       is_active: col.is_active !== false,
       meta_title: col.meta_title || '',
@@ -370,6 +372,27 @@ export default function Collections() {
                     className="w-full bg-noir border border-gray-700 rounded-lg px-4 py-3 text-white focus:border-gold outline-none resize-none"
                     placeholder="Describe this collection..."
                   />
+                </div>
+
+                {/* Gender filter */}
+                <div>
+                  <label className="text-sm text-gray-400 mb-2 block font-montserrat">
+                    Gender Filter
+                  </label>
+                  <select
+                    value={form.gender || ''}
+                    onChange={(e) => setForm({ ...form, gender: e.target.value })}
+                    className="w-full bg-noir border border-gray-700 rounded-lg px-4 py-3 text-white focus:border-gold outline-none"
+                  >
+                    <option value="">None — show manually assigned products only</option>
+                    <option value="male">Men's — auto-show all men's products</option>
+                    <option value="female">Women's — auto-show all women's products</option>
+                    <option value="unisex">Unisex — auto-show all unisex products</option>
+                  </select>
+                  <p className="text-xs text-gray-600 mt-2">
+                    When set, this collection automatically includes every product with that gender, in
+                    addition to any products you manually assign to it below.
+                  </p>
                 </div>
 
                 {/* Toggles */}
