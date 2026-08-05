@@ -1,16 +1,31 @@
 import React, { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { HiTag, HiX, HiCheck } from 'react-icons/hi';
 import toast from 'react-hot-toast';
 import useCartStore from '../../store/cartStore';
 import { formatPrice } from '../../utils/helpers';
+import { settingsAPI } from '../../services/api';
 
 export default function CartSummary({ showCoupon = true }) {
   const { items, getCartTotal, appliedCoupon, couponDiscount, applyCoupon, removeCoupon } = useCartStore();
   const [couponCode, setCouponCode] = useState('');
   const [isApplying, setIsApplying] = useState(false);
 
+  const { data: settings = {} } = useQuery({
+    queryKey: ['siteSettings'],
+    queryFn: async () => {
+      const { data } = await settingsAPI.get();
+      return data.settings || {};
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const shippingRate = settings.shipping_rate !== undefined ? Number(settings.shipping_rate) : 200;
+  const freeShippingThreshold = settings.free_shipping_threshold !== undefined
+    ? Number(settings.free_shipping_threshold) : 5000;
+
   const subtotal = getCartTotal();
-  const shipping = subtotal > 5000 ? 0 : subtotal > 0 ? 300 : 0;
+  const shipping = subtotal > freeShippingThreshold ? 0 : subtotal > 0 ? shippingRate : 0;
   const discount = couponDiscount || 0;
   const total = subtotal - discount + shipping;
 
@@ -51,9 +66,9 @@ export default function CartSummary({ showCoupon = true }) {
         </span>
       </div>
 
-      {subtotal < 5000 && subtotal > 0 && (
+      {subtotal < freeShippingThreshold && subtotal > 0 && (
         <p className="text-xs text-theme-muted opacity-70">
-          Add {formatPrice(5000 - subtotal)} more for free shipping
+          Add {formatPrice(freeShippingThreshold - subtotal)} more for free shipping
         </p>
       )}
 
