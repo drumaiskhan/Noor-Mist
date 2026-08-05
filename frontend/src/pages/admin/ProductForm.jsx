@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { productAPI, categoryAPI, uploadAPI } from '../../services/api';
+import { productAPI, categoryAPI, collectionsAPI, uploadAPI } from '../../services/api';
 import { HiArrowLeft, HiPlus, HiTrash, HiPhotograph } from 'react-icons/hi';
 import {
   GENDERS, FRAGRANCE_FAMILIES, CONCENTRATIONS,
@@ -21,6 +21,11 @@ export default function ProductForm() {
   const [form, setForm] = useState({
     name: '',
     category_id: '',
+    // Which storefront collection (e.g. "Men", "Women", "Azadi Sale") this
+    // product belongs to, so ?collection=<slug> shop links and collection
+    // tiles only surface products the admin has actually assigned. Optional
+    // - unlike category, a product doesn't have to belong to a collection.
+    collection_id: '',
     description: '',
     short_description: '',
     gender: '',
@@ -57,6 +62,14 @@ export default function ProductForm() {
     },
   });
 
+  const { data: collectionsData } = useQuery({
+    queryKey: ['adminCollectionsForProductForm'],
+    queryFn: async () => {
+      const { data } = await collectionsAPI.getAll();
+      return data.collections ?? [];
+    },
+  });
+
   const { data: productData, isLoading: isLoadingProduct } = useQuery({
     queryKey: ['adminProduct', id],
     queryFn: async () => {
@@ -72,6 +85,7 @@ export default function ProductForm() {
       setForm({
         name: p.name || '',
         category_id: p.category_id || '',
+        collection_id: p.collection_id || '',
         description: p.description || '',
         short_description: p.short_description || '',
         gender: p.gender || '',
@@ -196,6 +210,7 @@ export default function ProductForm() {
   }
 
   const categories = categoriesData || [];
+  const collections = collectionsData || [];
 
   return (
     <div className="space-y-6 max-w-4xl">
@@ -254,6 +269,23 @@ export default function ProductForm() {
                 <option value="">Select gender</option>
                 {GENDERS.map((g) => <option key={g.value} value={g.value}>{g.label}</option>)}
               </select>
+            </div>
+            <div>
+              <label className="text-sm text-gray-400 mb-2 block font-montserrat">Collection</label>
+              <select
+                name="collection_id"
+                value={form.collection_id}
+                onChange={handleChange}
+                className="w-full bg-noir border border-gray-700 rounded-lg px-4 py-3 text-white focus:border-gold outline-none"
+              >
+                <option value="">No collection</option>
+                {collections.map((col) => (
+                  <option key={col.id} value={col.id}>{col.name}</option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-500 mt-1">
+                Controls which collection page (e.g. Men, Women, Azadi Sale) this product shows up on.
+              </p>
             </div>
           </div>
 
