@@ -26,15 +26,15 @@ router.get('/:slug', async (req, res) => {
 
 router.post('/', requireAdmin, async (req, res) => {
   try {
-    const { name, description, image_url, banner_url, show_on_homepage, meta_title, meta_description } = req.body;
+    const { name, description, image_url, banner_url, gender, show_on_homepage, meta_title, meta_description } = req.body;
     let slug = slugify(name, { lower: true, strict: true });
     const existing = await query('SELECT id FROM collections WHERE slug=$1', [slug]);
     if (existing.rows.length) slug = `${slug}-${Date.now()}`;
 
     const result = await query(
-      `INSERT INTO collections (name, slug, description, image_url, banner_url, show_on_homepage, meta_title, meta_description)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
-      [name, slug, description, image_url, banner_url, show_on_homepage || false, meta_title, meta_description]
+      `INSERT INTO collections (name, slug, description, image_url, banner_url, gender, show_on_homepage, meta_title, meta_description)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
+      [name, slug, description, image_url, banner_url, gender || null, show_on_homepage || false, meta_title, meta_description]
     );
     res.status(201).json({ collection: result.rows[0] });
   } catch (error) {
@@ -44,11 +44,11 @@ router.post('/', requireAdmin, async (req, res) => {
 
 router.put('/:id', requireAdmin, async (req, res) => {
   try {
-    const { name, description, image_url, banner_url, show_on_homepage, is_active, meta_title, meta_description } = req.body;
+    const { name, description, image_url, banner_url, gender, show_on_homepage, is_active, meta_title, meta_description } = req.body;
     const result = await query(
-      `UPDATE collections SET name=$1, description=$2, image_url=$3, banner_url=$4, show_on_homepage=$5, is_active=$6, meta_title=$7, meta_description=$8
-       WHERE id=$9 RETURNING *`,
-      [name, description, image_url, banner_url, show_on_homepage || false, is_active !== false, meta_title, meta_description, req.params.id]
+      `UPDATE collections SET name=$1, description=$2, image_url=$3, banner_url=$4, gender=$5, show_on_homepage=$6, is_active=$7, meta_title=$8, meta_description=$9
+       WHERE id=$10 RETURNING *`,
+      [name, description, image_url, banner_url, gender || null, show_on_homepage || false, is_active !== false, meta_title, meta_description, req.params.id]
     );
     if (!result.rows.length) return res.status(404).json({ error: 'Collection not found' });
     res.json({ collection: result.rows[0] });
