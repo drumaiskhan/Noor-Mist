@@ -48,8 +48,34 @@ const defaultCollections = [
   },
 ];
 
-export default function Collections({ data = {} }) {
-  const collections = data.collections || defaultCollections;
+// Small fixed palette of gradients, cycled by index — real collections don't
+// carry a per-item gradient in the database, so this keeps the visual
+// variety the original hardcoded version had.
+const GRADIENTS = [
+  'from-blue-900/60 to-noir',
+  'from-pink-900/60 to-noir',
+  'from-amber-900/60 to-noir',
+  'from-yellow-900/60 to-noir',
+  'from-purple-900/60 to-noir',
+  'from-emerald-900/60 to-noir',
+];
+
+export default function Collections({ data = [] }) {
+  // Home.jsx passes the raw array of active collections from the API.
+  // Fall back to sample content only when there are genuinely none yet,
+  // so the section isn't empty for a brand-new store.
+  const realCollections = Array.isArray(data) ? data : data?.collections;
+  const usingDefaults = !realCollections || realCollections.length === 0;
+
+  const collections = usingDefaults
+    ? defaultCollections
+    : realCollections.map((c, i) => ({
+        title: c.name,
+        description: c.description || '',
+        image: c.image_url || '/images/placeholder-perfume.jpg',
+        link: `/shop?collection=${c.slug}`,
+        gradient: GRADIENTS[i % GRADIENTS.length],
+      }));
 
   return (
     <section className="py-16 md:py-24 bg-noir-light">

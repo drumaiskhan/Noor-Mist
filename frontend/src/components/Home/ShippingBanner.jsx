@@ -1,17 +1,32 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useQuery } from '@tanstack/react-query';
 import { HiX } from 'react-icons/hi';
 import { Link } from 'react-router-dom';
-
-const messages = [
-  { text: '✨ Free shipping on orders over ₨5,000', link: '/shop' },
-  { text: '🎁 Use code WELCOME10 for 10% off your first order', link: '/shop' },
-  { text: '💎 New arrivals — Discover our latest luxury fragrances', link: '/shop?new_arrival=true' },
-];
+import { settingsAPI } from '../../services/api';
+import { formatPrice } from '../../utils/helpers';
 
 export default function ShippingBanner() {
   const [dismissed, setDismissed] = useState(false);
   const [currentIndex, setCurrentIndex] = React.useState(0);
+
+  const { data: settings = {} } = useQuery({
+    queryKey: ['siteSettings'],
+    queryFn: async () => {
+      const { data } = await settingsAPI.get();
+      return data.settings || {};
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const freeShippingThreshold = settings.free_shipping_threshold !== undefined
+    ? Number(settings.free_shipping_threshold) : 5000;
+
+  const messages = [
+    { text: `✨ Free shipping on orders over ${formatPrice(freeShippingThreshold)}`, link: '/shop' },
+    { text: '🎁 Use code WELCOME10 for 10% off your first order', link: '/shop' },
+    { text: '💎 New arrivals — Discover our latest luxury fragrances', link: '/shop?new_arrival=true' },
+  ];
 
   React.useEffect(() => {
     const interval = setInterval(() => {

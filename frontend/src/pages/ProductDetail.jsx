@@ -8,7 +8,7 @@ import {
   HiChevronLeft, HiCheck, HiTruck, HiShieldCheck,
   HiArrowLeft,
 } from 'react-icons/hi';
-import { productAPI, reviewAPI } from '../services/api';
+import { productAPI, reviewAPI, settingsAPI } from '../services/api';
 import useCartStore from '../store/cartStore';
 import useWishlistStore from '../store/wishlistStore';
 import useAuthStore from '../store/authStore';
@@ -44,6 +44,17 @@ export default function ProductDetail() {
     queryFn: () => productAPI.getOne(slug),
     enabled: !!slug,
   });
+
+  const { data: settingsData } = useQuery({
+    queryKey: ['siteSettings'],
+    queryFn: async () => {
+      const { data } = await settingsAPI.get();
+      return data.settings || {};
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+  const freeShippingThreshold = settingsData?.free_shipping_threshold !== undefined
+    ? Number(settingsData.free_shipping_threshold) : 5000;
 
   const product = data?.data?.product;
   const related = data?.data?.related || [];
@@ -279,7 +290,7 @@ export default function ProductDetail() {
             <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gold/10">
               <div className="flex items-center gap-2 text-sm text-theme-muted">
                 <HiTruck className="w-5 h-5 text-gold" />
-                Free Shipping over ₨5000
+                Free Shipping over {formatPrice(freeShippingThreshold)}
               </div>
               <div className="flex items-center gap-2 text-sm text-theme-muted">
                 <HiShieldCheck className="w-5 h-5 text-gold" />

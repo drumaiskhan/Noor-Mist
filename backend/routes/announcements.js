@@ -261,76 +261,60 @@ router.put(
     try {
 
 
-      const {
+      // Build the SET clause dynamically so a field that is simply absent
+      // from the request (e.g. the "Active/Disabled" toggle only sends
+      // { is_active }) leaves the existing value untouched, while a field
+      // that IS present - including start_date/end_date sent as "" to
+      // clear a schedule - actually gets written. The old COALESCE(value,
+      // column) approach could never clear start_date/end_date, because
+      // an empty string was coerced to null before it reached the query,
+      // and COALESCE(null, column) just keeps the old value forever.
 
-        title,
-        description,
-        image_url,
-        button_text,
-        button_link,
-        is_active,
-        start_date,
-        end_date
+      const fields = [
+        'title',
+        'description',
+        'image_url',
+        'button_text',
+        'button_link',
+        'is_active',
+        'start_date',
+        'end_date',
+      ];
 
-      } = req.body;
+      const setClauses = [];
+      const values = [];
+      let i = 1;
 
+      for (const field of fields) {
+        if (!Object.prototype.hasOwnProperty.call(req.body, field)) continue;
 
+        let value = req.body[field];
+        if ((field === 'start_date' || field === 'end_date') && value === '') {
+          value = null; // explicit clear
+        }
 
+        setClauses.push(`${field} = $${i}`);
+        values.push(value);
+        i++;
+      }
+
+      if (setClauses.length === 0) {
+        return res.status(400).json({
+          message: 'No fields to update'
+        });
+      }
+
+      setClauses.push('updated_at = NOW()');
+      values.push(req.params.id);
 
       const result = await query(
-
         `
         UPDATE announcements
-
-        SET
-
-        title = COALESCE($1,title),
-
-        description = COALESCE($2,description),
-
-        image_url = COALESCE($3,image_url),
-
-        button_text = COALESCE($4,button_text),
-
-        button_link = COALESCE($5,button_link),
-
-        is_active = COALESCE($6,is_active),
-
-        start_date = COALESCE($7,start_date),
-
-        end_date = COALESCE($8,end_date)
-
-
-        WHERE id=$9
-
-
+        SET ${setClauses.join(', ')}
+        WHERE id = $${i}
         RETURNING *
-
         `,
-
-
-        [
-
-          title,
-
-          description,
-
-          image_url,
-
-          button_text,
-
-          button_link,
-
-          is_active,
-
-          start_date || null,
-
-          end_date || null,
-
-          req.params.id
-
-        ]
-
+        values
       );
 
 

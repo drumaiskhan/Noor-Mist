@@ -1,15 +1,18 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { HiHeart, HiShoppingBag, HiStar } from 'react-icons/hi';
 import useCartStore from '../../store/cartStore';
 import useWishlistStore from '../../store/wishlistStore';
+import useAuthStore from '../../store/authStore';
 import { formatPrice, calculateDiscount, getImageUrl, getMinPrice } from '../../utils/helpers';
 import toast from 'react-hot-toast';
 
 export default function ProductCard({ product }) {
+  const navigate = useNavigate();
   const addToCart = useCartStore((s) => s.addToCart);
   const { toggleWishlist, isInWishlist } = useWishlistStore();
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const isWishlisted = isInWishlist(product.id);
   const imageUrl = getImageUrl(product);
   const minPrice = getMinPrice(product.variants);
@@ -25,11 +28,20 @@ export default function ProductCard({ product }) {
     }
   };
 
-  const handleToggleWishlist = (e) => {
+  const handleToggleWishlist = async (e) => {
     e.preventDefault();
     e.stopPropagation();
-    toggleWishlist(product);
-    toast.success(isWishlisted ? 'Removed from wishlist' : 'Added to wishlist');
+    if (!isAuthenticated) {
+      toast.error('Please log in to save items to your wishlist');
+      navigate('/login');
+      return;
+    }
+    const result = await toggleWishlist(product);
+    if (result.success) {
+      toast.success(result.added ? 'Added to wishlist' : 'Removed from wishlist');
+    } else {
+      toast.error('Something went wrong — please try again');
+    }
   };
 
   return (

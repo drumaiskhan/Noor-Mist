@@ -288,6 +288,21 @@ CREATE TABLE IF NOT EXISTS media_library (
   created_at TIMESTAMP DEFAULT NOW()
 );
 
+-- Announcement Popups (storefront modal offers, admin managed)
+CREATE TABLE IF NOT EXISTS announcements (
+  id SERIAL PRIMARY KEY,
+  title VARCHAR(255) NOT NULL,
+  description TEXT DEFAULT '',
+  image_url TEXT,
+  button_text VARCHAR(100) DEFAULT 'Shop Now',
+  button_link VARCHAR(255) DEFAULT '/shop',
+  is_active BOOLEAN DEFAULT true,
+  start_date TIMESTAMP,
+  end_date TIMESTAMP,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
 -- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_products_slug ON products(slug);
 CREATE INDEX IF NOT EXISTS idx_products_category ON products(category_id);
@@ -302,3 +317,4 @@ CREATE INDEX IF NOT EXISTS idx_reviews_product ON reviews(product_id);
 CREATE INDEX IF NOT EXISTS idx_wishlist_user ON wishlist(user_id);
 CREATE INDEX IF NOT EXISTS idx_analytics_type ON analytics_events(event_type);
 CREATE INDEX IF NOT EXISTS idx_analytics_created ON analytics_events(created_at);
+CREATE INDEX IF NOT EXISTS idx_announcements_active_dates ON announcements(is_active, start_date, end_date);

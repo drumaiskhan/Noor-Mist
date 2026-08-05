@@ -4,15 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
 import { HiX } from 'react-icons/hi';
 import { settingsAPI } from '../../services/api';
-
-// Default rotating messages shown when no admin announcement is configured.
-// Once the admin enables an announcement in Settings → Announcement Bar,
-// those take over and these defaults are hidden.
-const DEFAULT_MESSAGES = [
-  { text: '✨ Free shipping on orders over ₨5,000', link: '/shop' },
-  { text: '🎁 Use code WELCOME10 for 10% off your first order', link: '/shop' },
-  { text: '💎 New arrivals — Discover our latest luxury fragrances', link: '/shop?new_arrival=true' },
-];
+import { formatPrice } from '../../utils/helpers';
 
 // Renders the announcement bar that sits above the header.
 // Color is fully theme-driven via --announcement-bg / --announcement-text,
@@ -30,6 +22,18 @@ export default function AnnouncementBar() {
     },
     staleTime: 5 * 60 * 1000,
   });
+
+  const freeShippingThreshold = settings.free_shipping_threshold !== undefined
+    ? Number(settings.free_shipping_threshold) : 5000;
+
+  // Default rotating messages shown when no admin announcement is configured.
+  // Once the admin enables an announcement in Settings → Announcement Bar,
+  // those take over and these defaults are hidden.
+  const DEFAULT_MESSAGES = [
+    { text: `✨ Free shipping on orders over ${formatPrice(freeShippingThreshold)}`, link: '/shop' },
+    { text: '🎁 Use code WELCOME10 for 10% off your first order', link: '/shop' },
+    { text: '💎 New arrivals — Discover our latest luxury fragrances', link: '/shop?new_arrival=true' },
+  ];
 
   // Rotate default messages only when no admin announcement is active
   const useDefaults = !settings.announcement_enabled || !settings.announcement_text;

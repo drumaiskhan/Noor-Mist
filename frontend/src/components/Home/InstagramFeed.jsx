@@ -12,7 +12,9 @@ const defaultPosts = [
 ];
 
 export default function InstagramFeed({ data = {} }) {
-  const posts = data.posts || defaultPosts;
+  const posts = data.posts?.length > 0 ? data.posts : defaultPosts;
+  const handle = data.handle || '@noormist';
+  const instagramUrl = `https://instagram.com/${handle.replace(/^@/, '')}`;
 
   return (
     <section className="py-16 md:py-24 bg-noir">
@@ -26,13 +28,13 @@ export default function InstagramFeed({ data = {} }) {
           className="text-center mb-12"
         >
           <a
-            href={data.instagramUrl || 'https://instagram.com/noormist'}
+            href={instagramUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 text-gold hover:underline mb-4"
           >
             <FaInstagram className="w-5 h-5" />
-            <span className="font-montserrat text-sm uppercase tracking-wider">@noormist</span>
+            <span className="font-montserrat text-sm uppercase tracking-wider">{handle}</span>
           </a>
           <h2 className="section-title">
             {data.title || 'Follow Us on Instagram'}
@@ -47,7 +49,7 @@ export default function InstagramFeed({ data = {} }) {
           {posts.map((post, index) => (
             <motion.a
               key={post.id}
-              href={data.instagramUrl || 'https://instagram.com/noormist'}
+              href={instagramUrl}
               target="_blank"
               rel="noopener noreferrer"
               initial={{ opacity: 0, scale: 0.8 }}

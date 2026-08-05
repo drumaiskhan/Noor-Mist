@@ -8,10 +8,9 @@ import {
   HiRefresh, HiChevronDown, HiChevronUp,
 } from 'react-icons/hi';
 import toast from 'react-hot-toast';
-import { useQuery } from '@tanstack/react-query';
 import useCartStore from '../store/cartStore';
 import useAuthStore from '../store/authStore';
-import { orderAPI, paymentAPI, settingsAPI } from '../services/api';
+import { orderAPI, paymentAPI } from '../services/api';
 import { formatPrice } from '../utils/helpers';
 
 const METHOD_ICONS = {
@@ -71,23 +70,8 @@ export default function Checkout() {
     paymentMethod: '',
   });
 
-  const { data: settings = {} } = useQuery({
-    queryKey: ['siteSettings'],
-    queryFn: async () => {
-      const { data } = await settingsAPI.get();
-      return data.settings || {};
-    },
-    staleTime: 5 * 60 * 1000,
-  });
-
-  // Same defaults as the backend (routes/orders.js) so the price shown here
-  // always matches what the order actually gets charged.
-  const shippingRate = settings.shipping_rate !== undefined ? Number(settings.shipping_rate) : 200;
-  const freeShippingThreshold = settings.free_shipping_threshold !== undefined
-    ? Number(settings.free_shipping_threshold) : 5000;
-
   const subtotal = getCartTotal();
-  const shipping = subtotal > freeShippingThreshold ? 0 : subtotal > 0 ? shippingRate : 0;
+  const shipping = subtotal > 5000 ? 0 : subtotal > 0 ? 300 : 0;
   const discount = couponDiscount || 0;
   const total = subtotal - discount + shipping;
 

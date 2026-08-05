@@ -187,13 +187,65 @@ function SectionFields({ section, form, setForm }) {
         </div>
       );
 
-    case 'instagram':
+    case 'instagram': {
+      const posts = form.posts && form.posts.length > 0 ? form.posts : [];
+      const updatePost = (i, field, value) => {
+        const next = [...posts];
+        next[i] = { ...next[i], [field]: value };
+        f('posts')(next);
+      };
+      const addPost = () => f('posts')([...posts, { image: '', likes: '', comments: '' }]);
+      const removePost = (i) => f('posts')(posts.filter((_, idx) => idx !== i));
+
       return (
         <div className="space-y-4">
           {t('title', 'Section Heading', { placeholder: 'Follow Our Journey' })}
+          {t('subtitle', 'Subtext', { placeholder: 'Join our community of fragrance lovers' })}
           {t('handle', 'Instagram Handle', { placeholder: '@noormist' })}
+
+          <div className="pb-2 border-b border-gray-800 pt-2 flex items-center justify-between">
+            <p className="text-xs text-gold uppercase tracking-widest font-montserrat">Posts</p>
+            <span className="text-xs text-gray-500">{posts.length} post{posts.length === 1 ? '' : 's'} — 6 fits the grid best</span>
+          </div>
+
+          {posts.length === 0 && (
+            <p className="text-xs text-gray-500">No posts yet — showing placeholder images until you add some.</p>
+          )}
+
+          {posts.map((post, i) => (
+            <div key={i} className="border border-gray-800 rounded-lg p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-gray-400 font-montserrat">Post {i + 1}</span>
+                <button
+                  type="button"
+                  onClick={() => removePost(i)}
+                  className="text-xs text-red-400 hover:text-red-300"
+                >
+                  Remove
+                </button>
+              </div>
+              <ImageUploadField
+                label="Image"
+                value={post.image}
+                onChange={(url) => updatePost(i, 'image', url)}
+              />
+              <div className="grid grid-cols-2 gap-3">
+                <TextField label="Likes" value={post.likes} onChange={(v) => updatePost(i, 'likes', v)} placeholder="2.4K" />
+                <TextField label="Comments" value={post.comments} onChange={(v) => updatePost(i, 'comments', v)} placeholder="128" />
+              </div>
+            </div>
+          ))}
+
+          <button
+            type="button"
+            onClick={addPost}
+            className="w-full py-2 border border-dashed border-gray-700 rounded-lg text-sm text-gray-400 hover:border-gold hover:text-gold transition-colors"
+          >
+            + Add Post
+          </button>
         </div>
       );
+    }
 
     case 'newsletter':
       return (

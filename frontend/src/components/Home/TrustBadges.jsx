@@ -1,31 +1,46 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { useQuery } from '@tanstack/react-query';
 import { HiTruck, HiShieldCheck, HiRefresh, HiPhone } from 'react-icons/hi';
-
-const badges = [
-  {
-    icon: HiTruck,
-    title: 'Free Shipping',
-    subtitle: 'On orders over ₨5,000',
-  },
-  {
-    icon: HiShieldCheck,
-    title: '100% Authentic',
-    subtitle: 'Guaranteed original fragrances',
-  },
-  {
-    icon: HiRefresh,
-    title: 'Easy Returns',
-    subtitle: '7-day hassle-free returns',
-  },
-  {
-    icon: HiPhone,
-    title: '24/7 Support',
-    subtitle: 'Dedicated customer service',
-  },
-];
+import { settingsAPI } from '../../services/api';
+import { formatPrice } from '../../utils/helpers';
 
 export default function TrustBadges() {
+  const { data: settings = {} } = useQuery({
+    queryKey: ['siteSettings'],
+    queryFn: async () => {
+      const { data } = await settingsAPI.get();
+      return data.settings || {};
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const freeShippingThreshold = settings.free_shipping_threshold !== undefined
+    ? Number(settings.free_shipping_threshold) : 5000;
+
+  const badges = [
+    {
+      icon: HiTruck,
+      title: 'Free Shipping',
+      subtitle: `On orders over ${formatPrice(freeShippingThreshold)}`,
+    },
+    {
+      icon: HiShieldCheck,
+      title: '100% Authentic',
+      subtitle: 'Guaranteed original fragrances',
+    },
+    {
+      icon: HiRefresh,
+      title: 'Easy Returns',
+      subtitle: '7-day hassle-free returns',
+    },
+    {
+      icon: HiPhone,
+      title: '24/7 Support',
+      subtitle: 'Dedicated customer service',
+    },
+  ];
+
   return (
     <section className="py-12 bg-noir-card border-y border-gold/10">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

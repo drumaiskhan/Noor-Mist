@@ -12,7 +12,20 @@ const useWishlistStore = create(
         set({ isLoading: true });
         try {
           const { data } = await wishlistAPI.get();
-          set({ items: data.items || [], isLoading: false });
+          // Backend returns { wishlist: [...] } with each row shaped like
+          // { id: <wishlist row id>, product_id, name, slug, image, variants }.
+          // Normalize to the same product shape ProductCard/getImageUrl expect
+          // everywhere else — critically, `id` here must be the PRODUCT id
+          // (not the wishlist row's own id), or isInWishlist() can never
+          // recognize an already-favorited item after a refresh.
+          const normalized = (data.wishlist || []).map((row) => ({
+            id: row.product_id,
+            name: row.name,
+            slug: row.slug,
+            variants: row.variants || [],
+            primary_image: row.image ? [{ url: row.image }] : [],
+          }));
+          set({ items: normalized, isLoading: false });
         } catch (error) {
           set({ isLoading: false });
         }
@@ -27,18 +40,25 @@ const useWishlistStore = create(
           }));
           try {
             await wishlistAPI.remove(product.id);
+            return { success: true, added: false };
           } catch (error) {
-            console.error('Failed to remove from wishlist:', error);
+            // Revert — the server never actually removed it, so local state
+            // shouldn't claim it's gone.
+            set((state) => ({ items: [...state.items, product] }));
+            return { success: false, added: false };
           }
-          return false;
         } else {
           set((state) => ({ items: [...state.items, product] }));
           try {
             await wishlistAPI.add(product.id);
+            return { success: true, added: true };
           } catch (error) {
-            console.error('Failed to add to wishlist:', error);
+            // Revert — the server never actually saved it.
+            set((state) => ({
+              items: state.items.filter((item) => item.id !== product.id),
+            }));
+            return { success: false, added: true };
           }
-          return true;
         }
       },
 

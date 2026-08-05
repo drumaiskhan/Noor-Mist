@@ -247,37 +247,6 @@ export default function Settings() {
           </div>
         </div>
 
-        {/* Shipping */}
-        <div className="luxury-card p-6 space-y-4">
-          <h2 className="text-xl font-playfair font-bold">Shipping</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="text-sm text-gray-400 mb-2 block font-montserrat">Shipping Rate</label>
-              <input
-                type="number"
-                min="0"
-                name="shipping_rate"
-                value={form.shipping_rate ?? 200}
-                onChange={handleChange}
-                className={inputCls}
-              />
-              <p className="text-xs text-gray-600 mt-2">Charged on orders below the free-shipping threshold.</p>
-            </div>
-            <div>
-              <label className="text-sm text-gray-400 mb-2 block font-montserrat">Free Shipping Threshold</label>
-              <input
-                type="number"
-                min="0"
-                name="free_shipping_threshold"
-                value={form.free_shipping_threshold ?? 5000}
-                onChange={handleChange}
-                className={inputCls}
-              />
-              <p className="text-xs text-gray-600 mt-2">Orders at or above this subtotal ship free.</p>
-            </div>
-          </div>
-        </div>
-
         {/* Announcement */}
         <div className="luxury-card p-6 space-y-4">
           <h2 className="text-xl font-playfair font-bold">Announcement Bar</h2>
