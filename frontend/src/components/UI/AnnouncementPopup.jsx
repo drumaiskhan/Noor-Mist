@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import {
   HiX,
   HiChevronLeft,
@@ -8,9 +9,35 @@ import {
 } from "react-icons/hi";
 import { announcementsAPI } from "../../services/api";
 
+// A plain <a href="/shop?..."> makes the browser do a full page reload,
+// which drops all client-side app state (cart, auth, etc). Internal links
+// (relative paths, or same-origin absolute URLs) should go through the
+// router instead; only genuinely external links need a real navigation.
+const isInternalLink = (link) => {
+  if (!link) return true;
+  if (link.startsWith("/")) return true;
+  try {
+    const url = new URL(link, window.location.origin);
+    return url.origin === window.location.origin;
+  } catch {
+    return true;
+  }
+};
+
+const toInternalPath = (link) => {
+  if (link.startsWith("/")) return link;
+  try {
+    const url = new URL(link, window.location.origin);
+    return `${url.pathname}${url.search}${url.hash}`;
+  } catch {
+    return link;
+  }
+};
+
 const DISMISS_KEY = "noor_mist_announcement_closed";
 
 export default function AnnouncementPopup() {
+  const navigate = useNavigate();
   const [current, setCurrent] = useState(0);
   const [visible, setVisible] = useState(false);
   const [dismissed, setDismissed] = useState(false);
@@ -64,6 +91,20 @@ export default function AnnouncementPopup() {
   const closePopup = () => {
     setVisible(false);
     sessionStorage.setItem(DISMISS_KEY, setId);
+  };
+
+  // Shop Now: close the popup (so it doesn't reappear on the shop page)
+  // and hand off to the router instead of a hard <a href> navigation, so
+  // the SPA doesn't do a full page refresh - and the shop page actually
+  // lands on the collection the admin picked.
+  const goToButtonLink = () => {
+    const link = announcement.button_link || "/";
+    closePopup();
+    if (isInternalLink(link)) {
+      navigate(toInternalPath(link));
+    } else {
+      window.open(link, "_blank", "noopener,noreferrer");
+    }
   };
 
   const next = () => {
@@ -133,12 +174,13 @@ export default function AnnouncementPopup() {
               )}
 
               {announcement.button_text && (
-                <a
-                  href={announcement.button_link || "/"}
+                <button
+                  type="button"
+                  onClick={goToButtonLink}
                   className="inline-block bg-gold text-black px-8 py-3 rounded-xl font-semibold hover:scale-105 transition"
                 >
                   {announcement.button_text}
-                </a>
+                </button>
               )}
 
               {announcements.length > 1 && (
