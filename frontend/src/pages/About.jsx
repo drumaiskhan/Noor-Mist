@@ -3,6 +3,7 @@ import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
 import { pagesAPI } from '../services/api';
+import BrandMark from '../components/UI/BrandMark';
 
 export default function About() {
   const { data } = useQuery({
@@ -25,6 +26,7 @@ export default function About() {
 
           {/* Hero */}
           <div className="text-center mb-16">
+            <BrandMark />
             <span className="text-gold text-xs tracking-[0.4em] uppercase font-montserrat mb-4 block">Our Story</span>
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-playfair font-bold mb-4 gold-text">
               {d.heading || 'About Noor Mist'}

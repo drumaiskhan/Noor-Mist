@@ -9,6 +9,7 @@ import MobileFilters from '../components/Shop/MobileFilters';
 import ProductGrid from '../components/Shop/ProductGrid';
 import SortSelect from '../components/Shop/SortSelect';
 import SearchBar from '../components/Shop/SearchBar';
+import BrandMark from '../components/UI/BrandMark';
 import useUIStore from '../store/uiStore';
 
 export default function Shop() {
@@ -93,6 +94,7 @@ export default function Shop() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-16">
         {/* Header */}
         <div className="text-center mb-10">
+          <BrandMark />
           <h1 className="section-title">
             {activeCollection ? activeCollection.name : 'Shop Perfumes'}
           </h1>

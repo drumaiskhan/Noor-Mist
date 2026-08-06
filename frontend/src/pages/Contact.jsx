@@ -5,6 +5,7 @@ import { HiMail, HiPhone, HiLocationMarker, HiClock, HiChat } from 'react-icons/
 import { useQuery } from '@tanstack/react-query';
 import { pagesAPI } from '../services/api';
 import toast from 'react-hot-toast';
+import BrandMark from '../components/UI/BrandMark';
 
 export default function Contact() {
   const [form, setForm] = useState({ name: '', email: '', subject: '', message: '' });
@@ -52,6 +53,7 @@ export default function Contact() {
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-16">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
           <div className="text-center mb-12">
+            <BrandMark />
             <span className="text-gold text-xs tracking-[0.4em] uppercase font-montserrat mb-4 block">Get In Touch</span>
             <h1 className="text-4xl md:text-5xl font-playfair font-bold mb-3">{d.heading || 'Contact Us'}</h1>
             {d.subheading && <p className="text-theme-muted font-cormorant text-lg">{d.subheading}</p>}

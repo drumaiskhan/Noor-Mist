@@ -190,55 +190,16 @@ body::after {
   border-top: none;
 }
 
-/* Faint monogram watermark — a whisper of the brand mark, never competing
-   with real content. Same positive, sub-chrome z-index as the rest of the
-   flourish. Anchored top-center, offset below the fixed header (and the
-   dismissible announcement bar above it) so neither ever clips it, and
-   centered horizontally so it sits in the empty space above each page's
-   hero heading rather than tucked into a corner. */
-#root::before {
-  content: 'NM';
-  position: fixed;
-  top: 150px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 260px;
-  height: 260px;
-  text-align: center;
-  font-family: var(--font-heading);
-  font-weight: 800;
-  font-size: 260px;
-  line-height: 1;
-  color: rgba(var(--gold-rgb), calc(0.045 * var(--bg-effect-opacity)));
-  z-index: 1;
-  pointer-events: none;
-  user-select: none;
-}
-
-.has-watermark-logo #root::before {
-  content: '';
-  background-image: var(--watermark-logo-url);
-  background-size: contain;
-  background-repeat: no-repeat;
-  background-position: center top;
-  /* Logos are rendered as an image, not colored text, so opacity (not
-     `color`) is what --bg-effect-opacity drives here. 0.35 is the visible
-     ceiling at 100% intensity — enough to read as a watermark, not a logo
-     slapped on top of the page. */
-  opacity: calc(0.35 * var(--bg-effect-opacity));
-}
-
+/* The NM/logo brand mark itself now lives in-flow, in BrandMark.jsx,
+   rendered directly above each page's hero heading — not as an ambient
+   fixed-position ghost. This keeps the corner frame + soft glow above as
+   pure background texture, and makes the mark a real, well-composited
+   element instead of a flat watermark. */
 @media (max-width: 768px) {
   body::before,
   body::after {
     width: 46px;
     height: 46px;
-  }
-  #root::before {
-    font-size: 120px;
-    width: 160px;
-    height: 160px;
-    top: 120px;
   }
 }
 

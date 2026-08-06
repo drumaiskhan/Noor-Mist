@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { HiChevronDown } from 'react-icons/hi';
 import { useQuery } from '@tanstack/react-query';
 import { pagesAPI } from '../services/api';
+import BrandMark from '../components/UI/BrandMark';
 
 const DEFAULTS = [
   { q: 'What makes Noor Mist fragrances special?', a: 'Our fragrances are crafted using the finest ingredients sourced globally, blended by master perfumers with decades of experience.' },
@@ -53,6 +54,7 @@ export default function FAQ() {
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-16">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
           <div className="text-center mb-12">
+            <BrandMark />
             <span className="text-gold text-xs tracking-[0.4em] uppercase font-montserrat mb-4 block">Help Center</span>
             <h1 className="text-4xl md:text-5xl font-playfair font-bold mb-3">Frequently Asked Questions</h1>
             <p className="text-theme-muted font-cormorant text-lg">Everything you need to know about Noor Mist</p>
