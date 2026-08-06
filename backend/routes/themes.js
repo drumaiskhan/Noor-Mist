@@ -62,6 +62,7 @@ const THEME_FIELDS = [
   // Background flourish (site-wide gold glow / corner frame / NM watermark)
   ['bg_effect_enabled', 'bgEffectEnabled', true],
   ['bg_effect_intensity', 'bgEffectIntensity', 70], // 0-100, only matters when enabled
+  ['watermark_logo_url', 'watermarkLogoUrl', ''], // empty = fall back to the default "NM" text mark
   // Advanced
   ['custom_css', 'customCss', ''],
 ];

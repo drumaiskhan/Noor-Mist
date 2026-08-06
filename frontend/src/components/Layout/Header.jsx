@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useQuery } from '@tanstack/react-query';
 import { HiSearch, HiHeart, HiShoppingBag, HiUser, HiMenu, HiX } from 'react-icons/hi';
 import useCartStore from '../../store/cartStore';
 import useWishlistStore from '../../store/wishlistStore';
 import useAuthStore from '../../store/authStore';
 import useUIStore from '../../store/uiStore';
+import { settingsAPI } from '../../services/api';
 
 export default function Header() {
   const [scrolled, setScrolled] = useState(false);
@@ -14,6 +16,18 @@ export default function Header() {
   const wishlistCount = useWishlistStore((s) => s.getWishlistCount());
   const { isAuthenticated, user } = useAuthStore();
   const { isMobileMenuOpen, toggleMobileMenu, openCartDrawer, openSearch } = useUIStore();
+
+  // Same query key as Footer.jsx / admin Settings.jsx — react-query dedupes
+  // this into a single shared fetch, so adding the logo here doesn't add an
+  // extra network request.
+  const { data: siteSettings } = useQuery({
+    queryKey: ['siteSettings'],
+    queryFn: async () => {
+      const { data } = await settingsAPI.get();
+      return data.settings ?? {};
+    },
+    staleTime: 5 * 60 * 1000,
+  });
 
   useEffect(() => {
     const handleScroll = () => {
@@ -48,9 +62,17 @@ export default function Header() {
 
             {/* Logo */}
             <Link to="/" className="flex items-center gap-2 group">
-              <span className="text-2xl md:text-3xl font-playfair font-bold gold-text">
-                Noor Mist
-              </span>
+              {siteSettings?.site_logo_url ? (
+                <img
+                  src={siteSettings.site_logo_url}
+                  alt={siteSettings.site_name || 'Noor Mist'}
+                  className="h-10 md:h-14 w-auto object-contain"
+                />
+              ) : (
+                <span className="text-2xl md:text-3xl font-playfair font-bold gold-text">
+                  {siteSettings?.site_name || 'Noor Mist'}
+                </span>
+              )}
             </Link>
 
             {/* Desktop Navigation */}

@@ -195,6 +195,17 @@ export default function Settings() {
             <input type="text" name="site_name" value={form.site_name || ''} onChange={handleChange} className={inputCls} />
           </div>
           <div>
+            <label className="text-sm text-gray-400 mb-2 block font-montserrat">Site Logo</label>
+            <IconUploadField
+              value={form.site_logo_url}
+              onChange={(url) => setForm({ ...form, site_logo_url: url })}
+            />
+            <p className="text-xs text-gray-600 mt-2">
+              Shown in the header on every page, in place of the "Noor Mist" text logo. Leave empty to keep the text
+              logo. A transparent PNG/SVG of your full lockup (mark + wordmark) works best.
+            </p>
+          </div>
+          <div>
             <label className="text-sm text-gray-400 mb-2 block font-montserrat">Tagline</label>
             <input type="text" name="tagline" value={form.tagline || ''} onChange={handleChange} className={inputCls} />
           </div>

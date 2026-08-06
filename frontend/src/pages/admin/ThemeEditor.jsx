@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { themeAPI } from '@services/api';
+import { themeAPI, uploadAPI } from '@services/api';
 import toast from 'react-hot-toast';
 import useThemeStore from '../../store/themeStore';
 
@@ -318,6 +318,8 @@ export default function ThemeEditor() {
   const [customizing, setCustomizing] = useState(false);
   const [activeTab, setActiveTab] = useState('colors');
   const [showExtraColors, setShowExtraColors] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const logoInputRef = useRef(null);
 
   const { data: themes = [], isLoading } = useQuery({
     queryKey: ['themes'],
@@ -411,6 +413,30 @@ export default function ThemeEditor() {
   };
 
   const setField = (key, value) => setSelectedTheme((prev) => ({ ...prev, [key]: value }));
+
+  const handleLogoUpload = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = ''; // allow re-selecting the same file next time
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please choose an image file');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image must be under 5MB');
+      return;
+    }
+    setUploadingLogo(true);
+    try {
+      const { data } = await uploadAPI.image(file);
+      setField('watermark_logo_url', data.url);
+      toast.success('Logo uploaded');
+    } catch (error) {
+      toast.error('Upload failed');
+    } finally {
+      setUploadingLogo(false);
+    }
+  };
 
   const saving = updateMutation.isLoading || createMutation.isLoading;
 
@@ -706,6 +732,66 @@ export default function ThemeEditor() {
                         onChange={(v) => setField('bg_effect_intensity', v)}
                         disabled={!(selectedTheme.bg_effect_enabled ?? true)}
                       />
+                    </div>
+
+                    <div className="mt-6 pt-5 border-t border-theme-border">
+                      <p className="text-xs uppercase tracking-wider text-theme-muted mb-1 font-montserrat">Watermark Logo</p>
+                      <p className="text-xs text-theme-muted opacity-70 mb-3">
+                        Replaces the default "NM" text mark with your own logo, site-wide. Leave empty to keep the text mark.
+                      </p>
+
+                      <div className="flex items-center gap-4 flex-wrap">
+                        {selectedTheme.watermark_logo_url ? (
+                          <div
+                            className="w-20 h-20 rounded-lg border border-theme-border flex items-center justify-center p-2"
+                            style={{ backgroundColor: selectedTheme.background_color }}
+                          >
+                            <img
+                              src={selectedTheme.watermark_logo_url}
+                              alt="Watermark logo preview"
+                              className="max-w-full max-h-full object-contain"
+                            />
+                          </div>
+                        ) : (
+                          <div className="w-20 h-20 rounded-lg border border-dashed border-theme-border flex items-center justify-center text-theme-muted text-[10px] text-center px-2">
+                            No logo set
+                          </div>
+                        )}
+
+                        <div className="flex flex-col gap-2">
+                          <input
+                            ref={logoInputRef}
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={handleLogoUpload}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => logoInputRef.current?.click()}
+                            disabled={uploadingLogo}
+                            className="px-4 py-2 text-sm rounded-lg border border-theme-border text-theme-text hover:border-gold transition disabled:opacity-50"
+                          >
+                            {uploadingLogo ? 'Uploading…' : selectedTheme.watermark_logo_url ? 'Replace Logo' : 'Upload Logo'}
+                          </button>
+
+                          {selectedTheme.watermark_logo_url && (
+                            <button
+                              type="button"
+                              onClick={() => setField('watermark_logo_url', '')}
+                              disabled={uploadingLogo}
+                              className="px-4 py-2 text-sm rounded-lg text-theme-muted hover:text-red-400 transition disabled:opacity-50"
+                            >
+                              Remove — use "NM" text mark
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      <p className="text-xs text-theme-muted opacity-60 mt-3">
+                        Best results: a square, transparent PNG or SVG, ideally light/gold-toned — it renders faint and
+                        semi-transparent behind page content, so busy or dark logos may not read well.
+                      </p>
                     </div>
                   </div>
 

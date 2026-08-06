@@ -57,6 +57,7 @@ const defaultTheme = {
   // Background flourish (site-wide gold glow / corner frame / NM watermark)
   bg_effect_enabled: true,
   bg_effect_intensity: 70, // 0-100
+  watermark_logo_url: '', // empty = fall back to the default "NM" text mark
   // Advanced
   custom_css: '',
 };
@@ -369,6 +370,18 @@ const useThemeStore = create((set, get) => ({
     // toggle + one slider instead of a separate on/off switch per layer.
     const bgEffectOpacity = t.bg_effect_enabled === false ? 0 : (t.bg_effect_intensity ?? 70) / 100;
     root.style.setProperty('--bg-effect-opacity', bgEffectOpacity);
+
+    // Custom watermark logo (replaces the default "NM" text mark when set).
+    // The URL itself goes through CSS url(...); the boolean class is what
+    // lets globals.css swap from text content to a background-image without
+    // any inline style juggling.
+    if (t.watermark_logo_url) {
+      root.style.setProperty('--watermark-logo-url', `url("${t.watermark_logo_url}")`);
+      root.classList.add('has-watermark-logo');
+    } else {
+      root.style.removeProperty('--watermark-logo-url');
+      root.classList.remove('has-watermark-logo');
+    }
 
     // ---- Custom CSS injection ----
     let styleTag = document.getElementById('theme-custom-css');
