@@ -59,6 +59,9 @@ const THEME_FIELDS = [
   ['product_card_style', 'productCardStyle', 'detailed'], // minimal | detailed | overlay
   // Mode
   ['theme_mode', 'themeMode', 'dark'], // dark | light | auto
+  // Background flourish (site-wide gold glow / corner frame / NM watermark)
+  ['bg_effect_enabled', 'bgEffectEnabled', true],
+  ['bg_effect_intensity', 'bgEffectIntensity', 70], // 0-100, only matters when enabled
   // Advanced
   ['custom_css', 'customCss', ''],
 ];

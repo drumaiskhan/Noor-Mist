@@ -54,6 +54,9 @@ const defaultTheme = {
   product_card_style: 'detailed', // minimal | detailed | overlay
   // Mode
   theme_mode: 'dark', // dark | light | auto
+  // Background flourish (site-wide gold glow / corner frame / NM watermark)
+  bg_effect_enabled: true,
+  bg_effect_intensity: 70, // 0-100
   // Advanced
   custom_css: '',
 };
@@ -359,6 +362,13 @@ const useThemeStore = create((set, get) => ({
         set({ _mqListenerAttached: true });
       }
     }
+
+    // ---- Background flourish (site-wide gold glow / corner frame / NM watermark) ----
+    // A single opacity multiplier the CSS in globals.css uses for every layer of
+    // that effect. 0 when disabled, otherwise intensity/100 — so admins get one
+    // toggle + one slider instead of a separate on/off switch per layer.
+    const bgEffectOpacity = t.bg_effect_enabled === false ? 0 : (t.bg_effect_intensity ?? 70) / 100;
+    root.style.setProperty('--bg-effect-opacity', bgEffectOpacity);
 
     // ---- Custom CSS injection ----
     let styleTag = document.getElementById('theme-custom-css');

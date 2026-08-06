@@ -176,7 +176,7 @@ const BLANK_THEME = {
   card_style: 'elevated', product_card_style: 'detailed',
   border_radius: 8, glass_effect: true, blur_intensity: 12,
   animations_enabled: true, shadows_enabled: true, card_hover_effect: 'lift',
-  theme_mode: 'dark', custom_css: '',
+  theme_mode: 'dark', bg_effect_enabled: true, bg_effect_intensity: 70, custom_css: '',
 };
 
 const swatchKeys = ['primary_color', 'secondary_color', 'accent_color', 'background_color'];
@@ -688,6 +688,26 @@ export default function ThemeEditor() {
                     value={selectedTheme.blur_intensity ?? 12} onChange={(v) => setField('blur_intensity', v)}
                     disabled={!(selectedTheme.glass_effect ?? true)}
                   />
+
+                  <div className="pt-4 border-t border-theme-border">
+                    <p className="text-xs uppercase tracking-wider text-theme-muted mb-3 font-montserrat">Background Flourish</p>
+                    <p className="text-xs text-theme-muted opacity-70 mb-3">
+                      The site-wide gold glow, corner frame and faint NM watermark behind every page.
+                    </p>
+                    <ToggleField
+                      label="Enable Background Flourish"
+                      checked={selectedTheme.bg_effect_enabled ?? true}
+                      onChange={(v) => setField('bg_effect_enabled', v)}
+                    />
+                    <div className="mt-4">
+                      <RangeField
+                        label="Flourish Intensity" unit="%" min={0} max={100}
+                        value={selectedTheme.bg_effect_intensity ?? 70}
+                        onChange={(v) => setField('bg_effect_intensity', v)}
+                        disabled={!(selectedTheme.bg_effect_enabled ?? true)}
+                      />
+                    </div>
+                  </div>
 
                   <div>
                     <p className="text-xs uppercase tracking-wider text-theme-muted mb-3 font-montserrat">Card Hover Effect</p>

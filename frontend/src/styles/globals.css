@@ -84,6 +84,7 @@
   --card-backdrop: none;
   --card-hover-transform: translateY(-6px);
   --card-hover-shadow: 0 20px 40px rgba(0,0,0,0.4);
+  --bg-effect-opacity: 0.7; /* overridden live by useThemeStore from bg_effect_enabled/intensity */
 }
 
 * {
@@ -98,14 +99,98 @@ html {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* ============================================================
+   NM Signature Background — theme-aware, site-wide
+   ------------------------------------------------------------
+   Recreates the framed gold-vignette mood of the brand poster
+   (soft radial glow, warm vignette, thin corner frame, faint NM
+   monogram watermark) purely in CSS — no image upload needed.
+   It's built entirely from the live theme CSS variables that
+   useThemeStore already writes to :root (--gold-rgb, --noir,
+   --bg-effect-opacity, etc.), so changing colors — or the
+   Background Flourish toggle/intensity slider — in the Theme
+   Editor updates this automatically, everywhere, with no extra
+   plumbing beyond that one --bg-effect-opacity multiplier.
+   ============================================================ */
 body {
   background-color: var(--noir);
+  background-image:
+    /* soft gold glow, top of the page — like light falling on the poster's logo */
+    radial-gradient(ellipse 1000px 640px at 50% -8%, rgba(var(--gold-rgb), calc(0.16 * var(--bg-effect-opacity))), transparent 60%),
+    /* secondary warm glow, bottom-right */
+    radial-gradient(ellipse 800px 560px at 100% 105%, rgba(var(--gold-rgb), calc(0.09 * var(--bg-effect-opacity))), transparent 55%),
+    /* faint glow, left side, for balance */
+    radial-gradient(ellipse 700px 500px at -5% 60%, rgba(var(--gold-rgb), calc(0.06 * var(--bg-effect-opacity))), transparent 55%),
+    /* whisper-thin diagonal shimmer lines */
+    repeating-linear-gradient(115deg, rgba(var(--gold-rgb), calc(0.03 * var(--bg-effect-opacity))) 0px, rgba(var(--gold-rgb), calc(0.03 * var(--bg-effect-opacity))) 1px, transparent 1px, transparent 160px),
+    /* vignette — darkens the edges so content reads clearly, like the poster's framing */
+    radial-gradient(ellipse 1500px 1000px at 50% 40%, transparent 55%, rgba(0, 0, 0, calc(0.4 * var(--bg-effect-opacity))) 100%);
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+  background-size: cover;
+  position: relative;
   color: var(--white);
   font-family: var(--font-body);
   font-size: var(--body-font-size);
   line-height: var(--line-height);
   letter-spacing: var(--letter-spacing);
   overflow-x: hidden;
+}
+
+/* Thin gold corner frame, fixed to the viewport — echoes the framed
+   edge of the poster art. z-index: -1 keeps it strictly behind every
+   real page element regardless of where it sits in the DOM. */
+body::before,
+body::after {
+  content: '';
+  position: fixed;
+  width: 90px;
+  height: 90px;
+  border: 1px solid rgba(var(--gold-rgb), calc(0.3 * var(--bg-effect-opacity)));
+  z-index: -1;
+  pointer-events: none;
+}
+body::before {
+  top: 22px;
+  left: 22px;
+  border-right: none;
+  border-bottom: none;
+}
+body::after {
+  bottom: 22px;
+  right: 22px;
+  border-left: none;
+  border-top: none;
+}
+
+/* Faint NM monogram watermark, tucked in the bottom-left corner — a
+   whisper of the brand mark, never competing with real content. */
+#root::before {
+  content: 'NM';
+  position: fixed;
+  bottom: -40px;
+  left: -20px;
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: 260px;
+  line-height: 1;
+  color: rgba(var(--gold-rgb), calc(0.045 * var(--bg-effect-opacity)));
+  z-index: -1;
+  pointer-events: none;
+  user-select: none;
+}
+
+@media (max-width: 768px) {
+  body::before,
+  body::after {
+    width: 46px;
+    height: 46px;
+  }
+  #root::before {
+    font-size: 140px;
+    bottom: -16px;
+    left: -10px;
+  }
 }
 
 h1, h2, h3, h4, h5, h6 {
