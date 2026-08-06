@@ -3,7 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { productAPI, categoryAPI, collectionsAPI, uploadAPI } from '../../services/api';
-import { HiArrowLeft, HiPlus, HiTrash, HiPhotograph } from 'react-icons/hi';
+import { HiArrowLeft, HiPlus, HiTrash, HiPhotograph, HiCheckCircle, HiStar, HiInformationCircle } from 'react-icons/hi';
 import {
   GENDERS, FRAGRANCE_FAMILIES, CONCENTRATIONS,
   LONGEVITY_OPTIONS, PROJECTION_OPTIONS, SEASONS, OCCASIONS,
@@ -11,6 +11,15 @@ import {
 import toast from 'react-hot-toast';
 
 const emptyVariant = { size_ml: 50, sku: '', price: '', sale_price: '', quantity: '' };
+
+const TABS = [
+  { id: 'basic', label: 'Basic Info' },
+  { id: 'fragrance', label: 'Fragrance Details' },
+  { id: 'flags', label: 'Flags' },
+  { id: 'variants', label: 'Variants & Pricing' },
+  { id: 'images', label: 'Images' },
+  { id: 'seo', label: 'SEO' },
+];
 
 export default function ProductForm() {
   const { id } = useParams();
@@ -53,6 +62,8 @@ export default function ProductForm() {
   const [images, setImages] = useState([]);
   const [imageFiles, setImageFiles] = useState([]);
   const [noteInput, setNoteInput] = useState({ top: '', middle: '', base: '' });
+  const [activeTab, setActiveTab] = useState('basic');
+  const [uploadingImages, setUploadingImages] = useState(false);
 
   const { data: categoriesData } = useQuery({
     queryKey: ['adminCategories'],
@@ -172,6 +183,7 @@ export default function ProductForm() {
   const handleImageUpload = async (e) => {
     const files = Array.from(e.target.files);
     setImageFiles(files);
+    setUploadingImages(true);
     try {
       const { data } = await uploadAPI.images(files);
       // Backend responds with { images: [...] } — spreading `data` itself
@@ -180,16 +192,39 @@ export default function ProductForm() {
       toast.success('Images uploaded');
     } catch {
       toast.error('Upload failed');
+    } finally {
+      setUploadingImages(false);
     }
   };
 
   const removeImage = (index) => setImages(images.filter((_, i) => i !== index));
 
+  // The storefront always treats images[0] as the primary/cover photo
+  // (see getImageUrl in utils/helpers.js) — this lets admin choose which
+  // uploaded image that is, instead of it being whichever was uploaded first.
+  const setPrimaryImage = (index) => {
+    if (index === 0) return;
+    setImages((prev) => {
+      const next = [...prev];
+      const [chosen] = next.splice(index, 1);
+      return [chosen, ...next];
+    });
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!form.name.trim()) return toast.error('Product name is required');
-    if (!form.category_id) return toast.error('Category is required');
-    if (variants.length === 0) return toast.error('At least one variant is required');
+    if (!form.name.trim()) {
+      setActiveTab('basic');
+      return toast.error('Product name is required');
+    }
+    if (!form.category_id) {
+      setActiveTab('basic');
+      return toast.error('Category is required');
+    }
+    if (variants.length === 0) {
+      setActiveTab('variants');
+      return toast.error('At least one variant is required');
+    }
 
     saveMutation.mutate({
       ...form,
@@ -213,7 +248,7 @@ export default function ProductForm() {
   const collections = collectionsData || [];
 
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="space-y-6 max-w-5xl">
       {/* Header */}
       <div className="flex items-center gap-4">
         <Link to="/admin/products" className="text-gray-400 hover:text-gold">
@@ -229,8 +264,33 @@ export default function ProductForm() {
         </div>
       </div>
 
+      {/* Tabs */}
+      <div className="flex gap-1 border-b border-gray-800 overflow-x-auto">
+        {TABS.map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            onClick={() => setActiveTab(tab.id)}
+            className={`px-4 py-2.5 text-sm font-montserrat whitespace-nowrap border-b-2 transition-colors ${
+              activeTab === tab.id
+                ? 'border-gold text-gold'
+                : 'border-transparent text-gray-400 hover:text-white'
+            }`}
+          >
+            {tab.label}
+            {tab.id === 'images' && images.length > 0 && (
+              <span className="ml-1.5 text-xs text-gray-500">({images.length})</span>
+            )}
+            {tab.id === 'variants' && (
+              <span className="ml-1.5 text-xs text-gray-500">({variants.length})</span>
+            )}
+          </button>
+        ))}
+      </div>
+
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Basic Info */}
+        {activeTab === 'basic' && (
         <div className="luxury-card p-6 space-y-4">
           <h2 className="text-xl font-playfair font-bold mb-4">Basic Information</h2>
           
@@ -313,8 +373,10 @@ export default function ProductForm() {
             />
           </div>
         </div>
+        )}
 
         {/* Fragrance Details */}
+        {activeTab === 'fragrance' && (
         <div className="luxury-card p-6 space-y-4">
           <h2 className="text-xl font-playfair font-bold mb-4">Fragrance Details</h2>
 
@@ -435,8 +497,10 @@ export default function ProductForm() {
             </div>
           </div>
         </div>
+        )}
 
         {/* Product Flags */}
+        {activeTab === 'flags' && (
         <div className="luxury-card p-6">
           <h2 className="text-xl font-playfair font-bold mb-4">Product Flags</h2>
           <div className="flex flex-wrap gap-6">
@@ -460,8 +524,10 @@ export default function ProductForm() {
             ))}
           </div>
         </div>
+        )}
 
         {/* Variants (Sizes) */}
+        {activeTab === 'variants' && (
         <div className="luxury-card p-6 space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-playfair font-bold">Variants (Sizes)</h2>
@@ -547,14 +613,35 @@ export default function ProductForm() {
             </div>
           ))}
         </div>
+        )}
 
         {/* Images */}
+        {activeTab === 'images' && (
         <div className="luxury-card p-6 space-y-4">
-          <h2 className="text-xl font-playfair font-bold">Product Images</h2>
+          <div>
+            <h2 className="text-xl font-playfair font-bold">Product Images</h2>
+            <p className="text-xs text-gray-500 mt-1 flex items-center gap-1.5">
+              <HiInformationCircle className="w-3.5 h-3.5" />
+              The first image is the cover photo shown on product cards. Hover an image to make it the cover.
+            </p>
+          </div>
           <div className="flex flex-wrap gap-4">
             {images.map((img, i) => (
-              <div key={i} className="relative w-24 h-24 rounded-lg overflow-hidden">
+              <div key={i} className="relative w-24 h-24 rounded-lg overflow-hidden group">
                 <img src={img.url || img} alt="" className="w-full h-full object-cover" />
+                {i === 0 ? (
+                  <span className="absolute bottom-1 left-1 flex items-center gap-0.5 bg-gold text-black text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                    <HiStar className="w-2.5 h-2.5" /> Cover
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setPrimaryImage(i)}
+                    className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-[10px] font-montserrat transition-opacity"
+                  >
+                    Set as Cover
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => removeImage(i)}
@@ -564,15 +651,35 @@ export default function ProductForm() {
                 </button>
               </div>
             ))}
-            <label className="w-24 h-24 border-2 border-dashed border-gray-600 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-gold transition-colors">
-              <HiPhotograph className="w-6 h-6 text-gray-400" />
-              <span className="text-xs text-gray-400 mt-1">Upload</span>
-              <input type="file" multiple accept="image/*" onChange={handleImageUpload} className="hidden" />
+            <label className={`w-24 h-24 border-2 border-dashed rounded-lg flex flex-col items-center justify-center transition-colors ${
+              uploadingImages ? 'border-gold/50 cursor-wait' : 'border-gray-600 cursor-pointer hover:border-gold'
+            }`}>
+              {uploadingImages ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-gold border-t-transparent rounded-full animate-spin" />
+                  <span className="text-xs text-gray-400 mt-1.5">Uploading…</span>
+                </>
+              ) : (
+                <>
+                  <HiPhotograph className="w-6 h-6 text-gray-400" />
+                  <span className="text-xs text-gray-400 mt-1">Upload</span>
+                </>
+              )}
+              <input
+                type="file"
+                multiple
+                accept="image/*"
+                onChange={handleImageUpload}
+                disabled={uploadingImages}
+                className="hidden"
+              />
             </label>
           </div>
         </div>
+        )}
 
         {/* SEO */}
+        {activeTab === 'seo' && (
         <div className="luxury-card p-6 space-y-4">
           <h2 className="text-xl font-playfair font-bold">SEO Settings</h2>
           <div>
@@ -588,10 +695,12 @@ export default function ProductForm() {
             <input type="text" name="meta_keywords" value={form.meta_keywords} onChange={handleChange} className="w-full bg-noir border border-gray-700 rounded-lg px-4 py-3 text-white focus:border-gold outline-none" />
           </div>
         </div>
+        )}
 
-        {/* Submit */}
-        <div className="flex gap-4">
-          <button type="submit" className="btn-gold" disabled={saveMutation.isLoading}>
+        {/* Submit — always visible regardless of active tab, sticky so it
+            doesn't require scrolling back down on long tabs like Fragrance Details */}
+        <div className="sticky bottom-0 flex gap-4 p-4 -mx-4 bg-noir/95 backdrop-blur-sm border-t border-gray-800">
+          <button type="submit" className="btn-gold" disabled={saveMutation.isLoading || uploadingImages}>
             {saveMutation.isLoading ? 'Saving...' : isEditing ? 'Update Product' : 'Create Product'}
           </button>
           <Link to="/admin/products" className="btn-outline-gold">Cancel</Link>

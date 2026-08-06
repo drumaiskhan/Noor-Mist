@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { orderAPI } from '../../services/api';
+import { orderAPI, paymentAPI } from '../../services/api';
 import { 
   HiSearch, HiEye, HiTruck, HiCheck, HiX, HiClock,
   HiClipboardList, HiCurrencyDollar, HiUser, HiLocationMarker,
-  HiPhone, HiMail, HiCube, HiArrowLeft, HiTrash, HiPrinter
+  HiPhone, HiMail, HiCube, HiArrowLeft, HiTrash, HiPrinter, HiDocumentText
 } from 'react-icons/hi';
 import { formatPrice, formatDateTime, formatDate } from '../../utils/helpers';
 import { ORDER_STATUSES, PAYMENT_STATUSES } from '../../utils/constants';
@@ -194,6 +194,24 @@ export default function Orders() {
       setSelectedOrder(null);
     },
     onError: (err) => toast.error(err.response?.data?.error || 'Failed to delete order'),
+  });
+
+  // Payment proof for whichever order is currently open in the detail modal.
+  const { data: proofData, isLoading: proofLoading } = useQuery({
+    queryKey: ['orderPaymentProof', selectedOrder?.id],
+    queryFn: () => paymentAPI.getProofByOrder(selectedOrder.id),
+    enabled: !!selectedOrder,
+  });
+  const paymentProof = proofData?.data?.proofs?.[0] || null;
+
+  const verifyProofMutation = useMutation({
+    mutationFn: ({ id, status }) => paymentAPI.verifyProof(id, { status }),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries(['orderPaymentProof', selectedOrder?.id]);
+      queryClient.invalidateQueries(['adminOrders']);
+      toast.success(variables.status === 'approved' ? 'Payment approved' : 'Payment rejected');
+    },
+    onError: (err) => toast.error(err.response?.data?.error || 'Failed to update payment status'),
   });
 
   const handleDelete = (e, orderId) => {
@@ -468,6 +486,113 @@ export default function Orders() {
                     ))}
                   </div>
                 </div>
+
+                {/* Payment Proof */}
+                {selectedOrder.payment_method && selectedOrder.payment_method !== 'cod' && (
+                  <div>
+                    <h3 className="text-sm font-montserrat text-gray-400 uppercase tracking-wider mb-3">
+                      Payment Proof
+                    </h3>
+                    <div className="luxury-card p-4">
+                      {proofLoading ? (
+                        <p className="text-sm text-gray-500">Loading…</p>
+                      ) : !paymentProof ? (
+                        <div className="flex items-center gap-2 text-sm text-gray-500">
+                          <HiDocumentText className="w-4 h-4" />
+                          No payment proof uploaded yet
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-between">
+                            <span
+                              className={`inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border ${
+                                paymentProof.status === 'approved'
+                                  ? 'bg-green-500/10 text-green-400 border-green-500/30'
+                                  : paymentProof.status === 'rejected'
+                                  ? 'bg-red-500/10 text-red-400 border-red-500/30'
+                                  : 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30'
+                              }`}
+                            >
+                              {paymentProof.status.charAt(0).toUpperCase() + paymentProof.status.slice(1)}
+                            </span>
+                            <span className="text-xs text-gray-500">
+                              Uploaded {formatDateTime(paymentProof.created_at)}
+                            </span>
+                          </div>
+
+                          <a href={paymentProof.screenshot_url} target="_blank" rel="noopener noreferrer">
+                            <img
+                              src={paymentProof.screenshot_url}
+                              alt="Payment proof"
+                              className="w-full max-h-80 object-contain rounded-lg border border-gray-800 bg-noir hover:opacity-90 transition-opacity"
+                            />
+                          </a>
+
+                          <div className="grid grid-cols-2 gap-3 text-sm">
+                            {paymentProof.transaction_id && (
+                              <div>
+                                <p className="text-gray-500 text-xs">Transaction ID</p>
+                                <p className="text-white">{paymentProof.transaction_id}</p>
+                              </div>
+                            )}
+                            {paymentProof.amount && (
+                              <div>
+                                <p className="text-gray-500 text-xs">Amount</p>
+                                <p className="text-white">{formatPrice(paymentProof.amount)}</p>
+                              </div>
+                            )}
+                            {paymentProof.sender_name && (
+                              <div>
+                                <p className="text-gray-500 text-xs">Sender Name</p>
+                                <p className="text-white">{paymentProof.sender_name}</p>
+                              </div>
+                            )}
+                            {paymentProof.sender_number && (
+                              <div>
+                                <p className="text-gray-500 text-xs">Sender Number</p>
+                                <p className="text-white">{paymentProof.sender_number}</p>
+                              </div>
+                            )}
+                            {paymentProof.payment_date && (
+                              <div>
+                                <p className="text-gray-500 text-xs">Payment Date</p>
+                                <p className="text-white">{formatDate(paymentProof.payment_date)}</p>
+                              </div>
+                            )}
+                          </div>
+
+                          {paymentProof.notes && (
+                            <div>
+                              <p className="text-gray-500 text-xs">Customer Note</p>
+                              <p className="text-gray-300 text-sm">{paymentProof.notes}</p>
+                            </div>
+                          )}
+
+                          {paymentProof.status === 'pending' && (
+                            <div className="flex gap-2 pt-2">
+                              <button
+                                onClick={() => verifyProofMutation.mutate({ id: paymentProof.id, status: 'approved' })}
+                                disabled={verifyProofMutation.isLoading}
+                                className="flex-1 flex items-center justify-center gap-1.5 text-sm py-2 rounded-lg bg-green-500/10 text-green-400 border border-green-500/30 hover:bg-green-500/20 transition-colors"
+                              >
+                                <HiCheck className="w-4 h-4" />
+                                Approve
+                              </button>
+                              <button
+                                onClick={() => verifyProofMutation.mutate({ id: paymentProof.id, status: 'rejected' })}
+                                disabled={verifyProofMutation.isLoading}
+                                className="flex-1 flex items-center justify-center gap-1.5 text-sm py-2 rounded-lg bg-red-500/10 text-red-400 border border-red-500/30 hover:bg-red-500/20 transition-colors"
+                              >
+                                <HiX className="w-4 h-4" />
+                                Reject
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 {/* Customer Information */}
                 <div>
