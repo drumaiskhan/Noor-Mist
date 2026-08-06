@@ -20,7 +20,10 @@ export default function Home() {
   const { data: sectionsData } = useQuery({
     queryKey: ["homepageSections"],
     queryFn: homepageAPI.getSections,
-    staleTime: 5 * 60 * 1000,
+    // Admin-edited content — 5 minutes was too long a "fresh" window;
+    // 60s still avoids refetching on every render but lets admin edits
+    // and post-sleep revalidation show up quickly.
+    staleTime: 60 * 1000,
   });
 
 
@@ -28,7 +31,7 @@ export default function Home() {
   const { data: collectionsData } = useQuery({
     queryKey: ["homepageCollections"],
     queryFn: collectionsAPI.getAll,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 60 * 1000,
   });
 
 
