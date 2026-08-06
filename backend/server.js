@@ -94,6 +94,21 @@ app.use(
 );
 
 // ================================
+// API Cache Control
+// ================================
+// Never let any proxy/CDN (Netlify's "/api/*" redirect to this origin,
+// browsers, etc.) cache API responses. Without this, a JSON response
+// fetched while the app was fine can keep being served — from a browser's
+// own disk cache or an intermediary proxy — even after the underlying data
+// (or this server, after a Render cold start) has moved on.
+app.use('/api', (req, res, next) => {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
+  next();
+});
+
+// ================================
 // API ROUTES
 // ================================
 
