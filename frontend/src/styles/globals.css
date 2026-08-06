@@ -190,21 +190,21 @@ body::after {
   border-top: none;
 }
 
-/* Faint monogram watermark, tucked in the bottom-left corner — a
-   whisper of the brand mark, never competing with real content. Same
-   positive, sub-chrome z-index as the rest of the flourish.
-   Default: the built-in "NM" text mark, theme-colored via --gold-rgb.
-   When an admin uploads a custom logo (Theme Editor → Background
-   Flourish → Watermark Logo), useThemeStore adds the .has-watermark-logo
-   class to <html> and sets --watermark-logo-url — the rule below swaps
-   the text mark for that image, same position/size/opacity envelope. */
+/* Faint monogram watermark — a whisper of the brand mark, never competing
+   with real content. Same positive, sub-chrome z-index as the rest of the
+   flourish. Anchored top-center, offset below the fixed header (and the
+   dismissible announcement bar above it) so neither ever clips it, and
+   centered horizontally so it sits in the empty space above each page's
+   hero heading rather than tucked into a corner. */
 #root::before {
   content: 'NM';
   position: fixed;
-  bottom: -40px;
-  left: -20px;
+  top: 150px;
+  left: 50%;
+  transform: translateX(-50%);
   width: 260px;
   height: 260px;
+  text-align: center;
   font-family: var(--font-heading);
   font-weight: 800;
   font-size: 260px;
@@ -220,7 +220,7 @@ body::after {
   background-image: var(--watermark-logo-url);
   background-size: contain;
   background-repeat: no-repeat;
-  background-position: left bottom;
+  background-position: center top;
   /* Logos are rendered as an image, not colored text, so opacity (not
      `color`) is what --bg-effect-opacity drives here. 0.35 is the visible
      ceiling at 100% intensity — enough to read as a watermark, not a logo
@@ -235,11 +235,10 @@ body::after {
     height: 46px;
   }
   #root::before {
-    font-size: 140px;
-    width: 140px;
-    height: 140px;
-    bottom: -16px;
-    left: -10px;
+    font-size: 120px;
+    width: 160px;
+    height: 160px;
+    top: 120px;
   }
 }
 
