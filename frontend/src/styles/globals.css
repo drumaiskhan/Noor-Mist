@@ -111,9 +111,41 @@ html {
    Background Flourish toggle/intensity slider — in the Theme
    Editor updates this automatically, everywhere, with no extra
    plumbing beyond that one --bg-effect-opacity multiplier.
+
+   IMPORTANT: none of these layers may live as `body`'s own
+   `background`, and none may use a negative z-index. An
+   element's own background always paints strictly behind ALL of
+   its descendants (no z-index can change that), and every real
+   page — MainLayout, AdminLayout, etc. — renders an opaque,
+   full-height wrapper div as a descendant of body/#root. So a
+   flourish layer painted as body's background, or behind #root
+   via z-index:-1, is guaranteed to be covered on every route,
+   not just Shop. Instead every layer here is its own `fixed`
+   pseudo-element, full-viewport or corner-anchored, with a small
+   *positive* z-index — high enough to paint over ordinary page
+   content (which has no z-index of its own) but well under the
+   real UI chrome (Header/BottomNav = z-40, drawers/modals =
+   z-50, the announcement popup = z-[9999]). `pointer-events: none`
+   on every layer keeps it purely decorative — clicks pass
+   straight through to the page underneath.
    ============================================================ */
 body {
   background-color: var(--noir);
+  color: var(--white);
+  font-family: var(--font-body);
+  font-size: var(--body-font-size);
+  line-height: var(--line-height);
+  letter-spacing: var(--letter-spacing);
+  overflow-x: hidden;
+}
+
+/* Soft gold glow + vignette — a fixed, full-viewport overlay instead of
+   body's own background-image, so it renders above every page's opaque
+   wrapper div rather than being silently painted underneath it. */
+#root::after {
+  content: '';
+  position: fixed;
+  inset: 0;
   background-image:
     /* soft gold glow, top of the page — like light falling on the poster's logo */
     radial-gradient(ellipse 1000px 640px at 50% -8%, rgba(var(--gold-rgb), calc(0.16 * var(--bg-effect-opacity))), transparent 60%),
@@ -125,21 +157,16 @@ body {
     repeating-linear-gradient(115deg, rgba(var(--gold-rgb), calc(0.03 * var(--bg-effect-opacity))) 0px, rgba(var(--gold-rgb), calc(0.03 * var(--bg-effect-opacity))) 1px, transparent 1px, transparent 160px),
     /* vignette — darkens the edges so content reads clearly, like the poster's framing */
     radial-gradient(ellipse 1500px 1000px at 50% 40%, transparent 55%, rgba(0, 0, 0, calc(0.4 * var(--bg-effect-opacity))) 100%);
-  background-attachment: fixed;
   background-repeat: no-repeat;
   background-size: cover;
-  position: relative;
-  color: var(--white);
-  font-family: var(--font-body);
-  font-size: var(--body-font-size);
-  line-height: var(--line-height);
-  letter-spacing: var(--letter-spacing);
-  overflow-x: hidden;
+  z-index: 1;
+  pointer-events: none;
+  mix-blend-mode: screen;
 }
 
 /* Thin gold corner frame, fixed to the viewport — echoes the framed
-   edge of the poster art. z-index: -1 keeps it strictly behind every
-   real page element regardless of where it sits in the DOM. */
+   edge of the poster art. Positive z-index (not -1) so it paints above
+   every route's opaque page wrapper, still well below real UI chrome. */
 body::before,
 body::after {
   content: '';
@@ -147,7 +174,7 @@ body::after {
   width: 90px;
   height: 90px;
   border: 1px solid rgba(var(--gold-rgb), calc(0.3 * var(--bg-effect-opacity)));
-  z-index: -1;
+  z-index: 1;
   pointer-events: none;
 }
 body::before {
@@ -164,7 +191,8 @@ body::after {
 }
 
 /* Faint NM monogram watermark, tucked in the bottom-left corner — a
-   whisper of the brand mark, never competing with real content. */
+   whisper of the brand mark, never competing with real content. Same
+   positive, sub-chrome z-index as the rest of the flourish. */
 #root::before {
   content: 'NM';
   position: fixed;
@@ -175,7 +203,7 @@ body::after {
   font-size: 260px;
   line-height: 1;
   color: rgba(var(--gold-rgb), calc(0.045 * var(--bg-effect-opacity)));
-  z-index: -1;
+  z-index: 1;
   pointer-events: none;
   user-select: none;
 }
