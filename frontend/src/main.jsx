@@ -10,10 +10,28 @@ import './styles/animations-new.css';
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 5 * 60 * 1000,
-      cacheTime: 30 * 60 * 1000,
+      // Always consider data stale so it refetches immediately
+      staleTime: 0,
+
+      // React Query v5
+      gcTime: 0,
+
+      // Retry failed requests twice
       retry: 2,
-      refetchOnWindowFocus: false,
+
+      // Always fetch fresh data
+      refetchOnMount: 'always',
+      refetchOnWindowFocus: true,
+      refetchOnReconnect: true,
+
+      // Don't automatically refetch every interval
+      refetchInterval: false,
+
+      // Don't keep showing old data while fetching
+      placeholderData: undefined,
+    },
+    mutations: {
+      retry: 1,
     },
   },
 });
