@@ -97,6 +97,15 @@ html {
   scroll-behavior: smooth;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* Page-level horizontal scroll on mobile is controlled by the
+     documentElement, not body — body's own overflow-x:hidden below
+     does NOT stop the viewport from scrolling sideways if any
+     descendant overflows. This is what was clipping the left edge
+     of product-page text/buttons on phones. Locking it here, plus
+     a hard max-width, closes that off regardless of which element
+     overflows. */
+  overflow-x: hidden;
+  max-width: 100%;
 }
 
 /* ============================================================
@@ -137,6 +146,13 @@ body {
   line-height: var(--line-height);
   letter-spacing: var(--letter-spacing);
   overflow-x: hidden;
+  max-width: 100%;
+  position: relative;
+}
+
+#root {
+  overflow-x: hidden;
+  max-width: 100%;
 }
 
 /* Soft gold glow + vignette — a fixed, full-viewport overlay instead of

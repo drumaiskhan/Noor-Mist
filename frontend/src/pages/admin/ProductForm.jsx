@@ -21,6 +21,32 @@ const TABS = [
   { id: 'seo', label: 'SEO' },
 ];
 
+// Checkbox-chip multi-select — better mobile UX than a native <select multiple>,
+// which requires ctrl/cmd-click and is hard to use with touch.
+function MultiSelectChips({ options, selected, onToggle }) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      {options.map((opt) => {
+        const isSelected = selected.includes(String(opt.value));
+        return (
+          <button
+            key={opt.value}
+            type="button"
+            onClick={() => onToggle(String(opt.value))}
+            className={`px-3 py-2 rounded-lg text-sm border transition-colors ${
+              isSelected
+                ? 'bg-gold text-black border-gold font-medium'
+                : 'bg-noir border-gray-700 text-gray-300 hover:border-gold/50'
+            }`}
+          >
+            {opt.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function ProductForm() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -35,6 +61,13 @@ export default function ProductForm() {
     // tiles only surface products the admin has actually assigned. Optional
     // - unlike category, a product doesn't have to belong to a collection.
     collection_id: '',
+    // Multi-select versions — a product can belong to more than one
+    // category/collection/fragrance family. category_id/collection_id/
+    // fragrance_family above stay in sync (first selected item) since
+    // older pages/filters still read those directly.
+    category_ids: [],
+    collection_ids: [],
+    fragrance_families: [],
     description: '',
     short_description: '',
     gender: '',
@@ -97,6 +130,9 @@ export default function ProductForm() {
         name: p.name || '',
         category_id: p.category_id || '',
         collection_id: p.collection_id || '',
+        category_ids: p.category_ids?.length ? p.category_ids.map(String) : (p.category_id ? [String(p.category_id)] : []),
+        collection_ids: p.collection_ids?.length ? p.collection_ids.map(String) : (p.collection_id ? [String(p.collection_id)] : []),
+        fragrance_families: p.fragrance_families?.length ? p.fragrance_families : (p.fragrance_family ? [p.fragrance_family] : []),
         description: p.description || '',
         short_description: p.short_description || '',
         gender: p.gender || '',
@@ -309,19 +345,19 @@ export default function ProductForm() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="text-sm text-gray-400 mb-2 block font-montserrat">Category *</label>
-              <select
-                name="category_id"
-                value={form.category_id}
-                onChange={handleChange}
-                required
-                className="w-full bg-noir border border-gray-700 rounded-lg px-4 py-3 text-white focus:border-gold outline-none"
-              >
-                <option value="">Select category</option>
-                {categories.map((cat) => (
-                  <option key={cat.id} value={cat.id}>{cat.name}</option>
-                ))}
-              </select>
+              <label className="text-sm text-gray-400 mb-2 block font-montserrat">Category * <span className="text-gray-600 font-normal">(select one or more)</span></label>
+              <MultiSelectChips
+                options={categories.map((cat) => ({ value: cat.id, label: cat.name }))}
+                selected={form.category_ids}
+                onToggle={(val) => {
+                  setForm((prev) => {
+                    const next = prev.category_ids.includes(val)
+                      ? prev.category_ids.filter((v) => v !== val)
+                      : [...prev.category_ids, val];
+                    return { ...prev, category_ids: next, category_id: next[0] || '' };
+                  });
+                }}
+              />
             </div>
             <div>
               <label className="text-sm text-gray-400 mb-2 block font-montserrat">Gender</label>
@@ -330,21 +366,22 @@ export default function ProductForm() {
                 {GENDERS.map((g) => <option key={g.value} value={g.value}>{g.label}</option>)}
               </select>
             </div>
-            <div>
-              <label className="text-sm text-gray-400 mb-2 block font-montserrat">Collection</label>
-              <select
-                name="collection_id"
-                value={form.collection_id}
-                onChange={handleChange}
-                className="w-full bg-noir border border-gray-700 rounded-lg px-4 py-3 text-white focus:border-gold outline-none"
-              >
-                <option value="">No collection</option>
-                {collections.map((col) => (
-                  <option key={col.id} value={col.id}>{col.name}</option>
-                ))}
-              </select>
+            <div className="md:col-span-2">
+              <label className="text-sm text-gray-400 mb-2 block font-montserrat">Collections <span className="text-gray-600 font-normal">(select any that apply)</span></label>
+              <MultiSelectChips
+                options={collections.map((col) => ({ value: col.id, label: col.name }))}
+                selected={form.collection_ids}
+                onToggle={(val) => {
+                  setForm((prev) => {
+                    const next = prev.collection_ids.includes(val)
+                      ? prev.collection_ids.filter((v) => v !== val)
+                      : [...prev.collection_ids, val];
+                    return { ...prev, collection_ids: next, collection_id: next[0] || '' };
+                  });
+                }}
+              />
               <p className="text-xs text-gray-500 mt-1">
-                Controls which collection page (e.g. Men, Women, Azadi Sale) this product shows up on.
+                Controls which collection pages (e.g. Men, Women, Azadi Sale) this product shows up on — pick as many as apply.
               </p>
             </div>
           </div>
@@ -380,14 +417,23 @@ export default function ProductForm() {
         <div className="luxury-card p-6 space-y-4">
           <h2 className="text-xl font-playfair font-bold mb-4">Fragrance Details</h2>
 
+          <div>
+            <label className="text-sm text-gray-400 mb-2 block font-montserrat">Fragrance Family <span className="text-gray-600 font-normal">(select one or more)</span></label>
+            <MultiSelectChips
+              options={FRAGRANCE_FAMILIES}
+              selected={form.fragrance_families}
+              onToggle={(val) => {
+                setForm((prev) => {
+                  const next = prev.fragrance_families.includes(val)
+                    ? prev.fragrance_families.filter((v) => v !== val)
+                    : [...prev.fragrance_families, val];
+                  return { ...prev, fragrance_families: next, fragrance_family: next[0] || '' };
+                });
+              }}
+            />
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="text-sm text-gray-400 mb-2 block font-montserrat">Fragrance Family</label>
-              <select name="fragrance_family" value={form.fragrance_family} onChange={handleChange} className="w-full bg-noir border border-gray-700 rounded-lg px-4 py-3 text-white focus:border-gold outline-none">
-                <option value="">Select</option>
-                {FRAGRANCE_FAMILIES.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
-              </select>
-            </div>
             <div>
               <label className="text-sm text-gray-400 mb-2 block font-montserrat">Concentration</label>
               <select name="concentration" value={form.concentration} onChange={handleChange} className="w-full bg-noir border border-gray-700 rounded-lg px-4 py-3 text-white focus:border-gold outline-none">

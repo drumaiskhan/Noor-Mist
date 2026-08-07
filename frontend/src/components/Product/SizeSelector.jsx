@@ -17,7 +17,6 @@ export default function SizeSelector({ variants = [], selected, onSelect }) {
             disabled={variant.quantity === 0}
           >
             <span className="block text-sm font-medium">{variant.size_ml} ml</span>
-            <span className="block text-sm font-medium">{variant.size}ml</span>
             {variant.quantity <= 10 && variant.quantity > 0 && (
               <span className="block text-xs text-danger mt-1">Only {variant.quantity} left</span>
             )}

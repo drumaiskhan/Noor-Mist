@@ -27,9 +27,60 @@ app.use(
   })
 );
 
+// ================================
+// CORS — supports multiple deployed origins at once
+// ------------------------------------------------------------
+// Set CORS_ORIGIN in the environment to a comma-separated list, e.g.
+//   CORS_ORIGIN=https://noormist.netlify.app,https://noormist.up.railway.app,https://noormist.onrender.com
+// Any origin in that list is allowed, so the same backend can serve a
+// frontend on Netlify while the backend itself (or a staging copy) is
+// hosted on Railway/Render/Vercel/etc. simultaneously, plus local dev.
+// A `credentials: true` CORS response can't use origin: '*', so we
+// reflect back whichever allowed origin actually made the request.
+const DEFAULT_ALLOWED_ORIGINS = [
+  'http://localhost:3000',
+  'http://localhost:5173',
+];
+
+// Recognize common hosting platforms automatically, even if their exact
+// generated subdomain isn't listed in CORS_ORIGIN yet — saves having to
+// redeploy env vars every time a new Railway/Render/Vercel/Netlify preview
+// URL is spun up.
+const ALLOWED_ORIGIN_PATTERNS = [
+  /\.netlify\.app$/,
+  /\.railway\.app$/,
+  /\.up\.railway\.app$/,
+  /\.onrender\.com$/,
+  /\.vercel\.app$/,
+];
+
+const envOrigins = (process.env.CORS_ORIGIN || '')
+  .split(',')
+  .map((o) => o.trim())
+  .filter(Boolean);
+
+const allowedOrigins = [...new Set([...DEFAULT_ALLOWED_ORIGINS, ...envOrigins])];
+
+function isOriginAllowed(origin) {
+  if (!origin) return true; // server-to-server calls, curl, health checks — no Origin header
+  if (allowedOrigins.includes(origin)) return true;
+  try {
+    const { hostname } = new URL(origin);
+    return ALLOWED_ORIGIN_PATTERNS.some((pattern) => pattern.test(hostname));
+  } catch {
+    return false;
+  }
+}
+
 app.use(
   cors({
-    origin: process.env.CORS_ORIGIN || true,
+    origin(origin, callback) {
+      if (isOriginAllowed(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error(`CORS: origin ${origin} is not allowed`));
+      }
+    },
     credentials: true,
     methods: [
       'GET',

@@ -12,17 +12,30 @@ function buildProductQuery(params) {
   let idx = 1;
 
   if (params.gender) { conditions.push(`p.gender = $${idx++}`); values.push(params.gender); }
-  if (params.fragrance_family) { conditions.push(`p.fragrance_family = $${idx++}`); values.push(params.fragrance_family); }
+  if (params.fragrance_family) {
+    conditions.push(`(p.fragrance_family = $${idx} OR $${idx} = ANY(p.fragrance_families))`);
+    values.push(params.fragrance_family);
+    idx += 1;
+  }
   if (params.concentration) { conditions.push(`p.concentration = $${idx++}`); values.push(params.concentration); }
-  if (params.category_id) { conditions.push(`p.category_id = $${idx++}`); values.push(params.category_id); }
-  if (params.collection_id) { conditions.push(`p.collection_id = $${idx++}`); values.push(params.collection_id); }
+  if (params.category_id) {
+    conditions.push(`(p.category_id = $${idx} OR $${idx} = ANY(p.category_ids))`);
+    values.push(params.category_id);
+    idx += 1;
+  }
+  if (params.collection_id) {
+    conditions.push(`(p.collection_id = $${idx} OR $${idx} = ANY(p.collection_ids))`);
+    values.push(params.collection_id);
+    idx += 1;
+  }
   if (params.collection) {
     // Shop.jsx passes the collection's slug (not its id). A collection can also
     // carry a gender tag (e.g. "Men's Collection"), in which case it should
     // automatically include every product of that gender — not just the ones
-    // an admin manually assigned to it via collection_id.
+    // an admin manually assigned to it via collection_id/collection_ids.
     conditions.push(`(
       p.collection_id = (SELECT id FROM collections WHERE slug = $${idx})
+      OR (SELECT id FROM collections WHERE slug = $${idx}) = ANY(p.collection_ids)
       OR p.gender = (SELECT gender FROM collections WHERE slug = $${idx} AND gender IS NOT NULL)
     )`);
     values.push(params.collection);
@@ -496,10 +509,22 @@ router.post('/', requireAdmin, async (req, res) => {
     const {
       name, description, short_description, brand, fragrance_family, concentration,
       gender, top_notes, middle_notes, base_notes, longevity, projection, season, occasion,
-      category_id, collection_id, is_featured, is_bestseller, is_new_arrival,
+      category_id, collection_id, category_ids, collection_ids, fragrance_families,
+      is_featured, is_bestseller, is_new_arrival,
       is_limited_edition, is_gift_set, is_visible, meta_title, meta_description,
       variants, images,
     } = req.body;
+
+    // Multi-select arrays are the source of truth when provided; the
+    // singular columns (still used by older filters/pages) derive from the
+    // first selected value so nothing that reads category_id/collection_id/
+    // fragrance_family directly needs to change.
+    const catIds = Array.isArray(category_ids) ? category_ids.filter(Boolean) : (category_id ? [category_id] : []);
+    const colIds = Array.isArray(collection_ids) ? collection_ids.filter(Boolean) : (collection_id ? [collection_id] : []);
+    const fragFamilies = Array.isArray(fragrance_families) ? fragrance_families.filter(Boolean) : (fragrance_family ? [fragrance_family] : []);
+    const primaryCategoryId = category_id || catIds[0] || null;
+    const primaryCollectionId = collection_id || colIds[0] || null;
+    const primaryFragranceFamily = fragrance_family || fragFamilies[0] || null;
 
     let slug = slugify(name, { lower: true, strict: true });
     const existing = await query('SELECT id FROM products WHERE slug = $1', [slug]);
@@ -508,13 +533,14 @@ router.post('/', requireAdmin, async (req, res) => {
     const result = await query(
       `INSERT INTO products (name, slug, description, short_description, brand, fragrance_family,
         concentration, gender, top_notes, middle_notes, base_notes, longevity, projection,
-        season, occasion, category_id, collection_id, is_featured, is_bestseller, is_new_arrival,
+        season, occasion, category_id, collection_id, category_ids, collection_ids, fragrance_families,
+        is_featured, is_bestseller, is_new_arrival,
         is_limited_edition, is_gift_set, is_visible, meta_title, meta_description)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28)
        RETURNING *`,
-      [name, slug, description, short_description, brand, fragrance_family, concentration,
+      [name, slug, description, short_description, brand, primaryFragranceFamily, concentration,
        gender, top_notes || [], middle_notes || [], base_notes || [], longevity, projection,
-       season || [], occasion || [], category_id || null, collection_id || null,
+       season || [], occasion || [], primaryCategoryId, primaryCollectionId, catIds, colIds, fragFamilies,
        is_featured || false, is_bestseller || false, is_new_arrival !== false,
        is_limited_edition || false, is_gift_set || false, is_visible !== false,
        meta_title, meta_description]
@@ -537,10 +563,18 @@ router.put('/:id', requireAdmin, async (req, res) => {
     const {
       name, description, short_description, brand, fragrance_family, concentration,
       gender, top_notes, middle_notes, base_notes, longevity, projection, season, occasion,
-      category_id, collection_id, is_featured, is_bestseller, is_new_arrival,
+      category_id, collection_id, category_ids, collection_ids, fragrance_families,
+      is_featured, is_bestseller, is_new_arrival,
       is_limited_edition, is_gift_set, is_visible, meta_title, meta_description,
       variants, images,
     } = req.body;
+
+    const catIds = Array.isArray(category_ids) ? category_ids.filter(Boolean) : (category_id ? [category_id] : []);
+    const colIds = Array.isArray(collection_ids) ? collection_ids.filter(Boolean) : (collection_id ? [collection_id] : []);
+    const fragFamilies = Array.isArray(fragrance_families) ? fragrance_families.filter(Boolean) : (fragrance_family ? [fragrance_family] : []);
+    const primaryCategoryId = category_id || catIds[0] || null;
+    const primaryCollectionId = collection_id || colIds[0] || null;
+    const primaryFragranceFamily = fragrance_family || fragFamilies[0] || null;
 
     const result = await query(
       `UPDATE products SET name=$1, description=$2, short_description=$3, brand=$4,
@@ -548,14 +582,15 @@ router.put('/:id', requireAdmin, async (req, res) => {
         base_notes=$10, longevity=$11, projection=$12, season=$13, occasion=$14,
         category_id=$15, collection_id=$16, is_featured=$17, is_bestseller=$18,
         is_new_arrival=$19, is_limited_edition=$20, is_gift_set=$21, is_visible=$22,
-        meta_title=$23, meta_description=$24, updated_at=NOW()
-       WHERE id=$25 RETURNING *`,
-      [name, description, short_description, brand, fragrance_family, concentration,
+        meta_title=$23, meta_description=$24, category_ids=$25, collection_ids=$26,
+        fragrance_families=$27, updated_at=NOW()
+       WHERE id=$28 RETURNING *`,
+      [name, description, short_description, brand, primaryFragranceFamily, concentration,
        gender, top_notes || [], middle_notes || [], base_notes || [], longevity, projection,
-       season || [], occasion || [], category_id || null, collection_id || null,
+       season || [], occasion || [], primaryCategoryId, primaryCollectionId,
        is_featured || false, is_bestseller || false, is_new_arrival !== false,
        is_limited_edition || false, is_gift_set || false, is_visible !== false,
-       meta_title, meta_description, req.params.id]
+       meta_title, meta_description, catIds, colIds, fragFamilies, req.params.id]
     );
 
     if (!result.rows.length) return res.status(404).json({ error: 'Product not found' });

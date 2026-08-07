@@ -115,8 +115,59 @@ async function initDatabase() {
     await query(`ALTER TABLE reviews ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'pending'`);
     await query(`UPDATE reviews SET status = 'approved' WHERE is_approved = true AND status = 'pending'`);
 
-    // Gender-targeted collections (e.g. "Men's", "Women's") — migration for existing DBs
+    // Multi-select categories/collections/fragrance families on products —
+    // additive array columns alongside the existing singular ones, so every
+    // query and page that still reads category_id/collection_id/
+    // fragrance_family keeps working unchanged.
+    await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS category_ids INTEGER[] DEFAULT '{}'`);
+    await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS collection_ids INTEGER[] DEFAULT '{}'`);
+    await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS fragrance_families TEXT[] DEFAULT '{}'`);
+    // Backfill so products created before this migration still show up
+    // correctly wherever the new array columns are used.
+    await query(`UPDATE products SET category_ids = ARRAY[category_id] WHERE category_id IS NOT NULL AND category_ids = '{}'`);
+    await query(`UPDATE products SET collection_ids = ARRAY[collection_id] WHERE collection_id IS NOT NULL AND collection_ids = '{}'`);
+    await query(`UPDATE products SET fragrance_families = ARRAY[fragrance_family] WHERE fragrance_family IS NOT NULL AND fragrance_families = '{}'`);
+
+
+    // references. CREATE TABLE IF NOT EXISTS in schema.sql only runs the CREATE
+    // the very first time a table is made; if this table already existed on the
+    // live DB before any of these columns were added to schema.sql, it silently
+    // stays missing forever with no error — until an UPDATE/INSERT references it
+    // and Postgres throws "column does not exist". That 500 is exactly what an
+    // admin sees as "gives error upon saving".
     await query(`ALTER TABLE collections ADD COLUMN IF NOT EXISTS gender VARCHAR(20)`);
+    await query(`ALTER TABLE collections ADD COLUMN IF NOT EXISTS banner_url TEXT`);
+    await query(`ALTER TABLE collections ADD COLUMN IF NOT EXISTS show_on_homepage BOOLEAN DEFAULT false`);
+    await query(`ALTER TABLE collections ADD COLUMN IF NOT EXISTS meta_title VARCHAR(255)`);
+    await query(`ALTER TABLE collections ADD COLUMN IF NOT EXISTS meta_description TEXT`);
+    await query(`ALTER TABLE collections ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true`);
+
+    // Announcements — same defensive migration for routes/announcements.js,
+    // which unconditionally writes updated_at on every edit. If this table
+    // predates that column, every single edit throws.
+    await query(`
+      CREATE TABLE IF NOT EXISTS announcements (
+        id SERIAL PRIMARY KEY,
+        title VARCHAR(255) NOT NULL,
+        description TEXT DEFAULT '',
+        image_url TEXT,
+        button_text VARCHAR(100) DEFAULT 'Shop Now',
+        button_link VARCHAR(255) DEFAULT '/shop',
+        is_active BOOLEAN DEFAULT true,
+        start_date TIMESTAMP,
+        end_date TIMESTAMP,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    await query(`ALTER TABLE announcements ADD COLUMN IF NOT EXISTS description TEXT DEFAULT ''`);
+    await query(`ALTER TABLE announcements ADD COLUMN IF NOT EXISTS image_url TEXT`);
+    await query(`ALTER TABLE announcements ADD COLUMN IF NOT EXISTS button_text VARCHAR(100) DEFAULT 'Shop Now'`);
+    await query(`ALTER TABLE announcements ADD COLUMN IF NOT EXISTS button_link VARCHAR(255) DEFAULT '/shop'`);
+    await query(`ALTER TABLE announcements ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true`);
+    await query(`ALTER TABLE announcements ADD COLUMN IF NOT EXISTS start_date TIMESTAMP`);
+    await query(`ALTER TABLE announcements ADD COLUMN IF NOT EXISTS end_date TIMESTAMP`);
+    await query(`ALTER TABLE announcements ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW()`);
 
     // Check if admin exists
     const adminCheck = await query("SELECT id FROM users WHERE role = 'admin' LIMIT 1");

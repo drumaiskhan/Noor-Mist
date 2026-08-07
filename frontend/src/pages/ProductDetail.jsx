@@ -247,30 +247,33 @@ export default function ProductDetail() {
               </div>
             )}
 
-            {/* Action Buttons */}
-            <div className="flex flex-wrap gap-3 pt-4">
+            {/* Action Buttons — grid on narrow phones so two full-width
+                buttons plus two icon buttons never fight for space on one
+                line (that min-content squeeze was pushing the row past the
+                viewport edge on small screens). */}
+            <div className="grid grid-cols-[1fr_1fr_auto_auto] gap-2 sm:gap-3 pt-4">
               <Button
                 variant="gold"
                 size="lg"
                 onClick={handleAddToCart}
                 disabled={!selectedVariant || selectedVariant.quantity === 0}
-                className="flex-1"
+                className="w-full !px-2 sm:!px-6"
               >
-                <HiShoppingBag className="w-5 h-5" />
-                Add to Cart
+                <HiShoppingBag className="w-5 h-5 flex-shrink-0" />
+                <span className="truncate">Add to Cart</span>
               </Button>
               <Button
                 variant="gold"
                 size="lg"
                 onClick={handleBuyNow}
                 disabled={!selectedVariant || selectedVariant.quantity === 0}
-                className="flex-1"
+                className="w-full !px-2 sm:!px-6"
               >
                 Buy Now
               </Button>
               <button
                 onClick={() => toggleWishlist(product)}
-                className={`p-4 rounded-xl border transition-all ${
+                className={`flex-shrink-0 p-3 sm:p-4 rounded-xl border transition-all ${
                   isWishlisted
                     ? 'bg-gold/10 border-gold text-gold'
                     : 'border-theme-border text-theme-muted hover:border-gold hover:text-theme-primary'
@@ -280,7 +283,7 @@ export default function ProductDetail() {
               </button>
               <button
                 onClick={handleShare}
-                className="p-4 rounded-xl border border-theme-border text-theme-muted hover:border-gold hover:text-theme-primary transition-all"
+                className="flex-shrink-0 p-3 sm:p-4 rounded-xl border border-theme-border text-theme-muted hover:border-gold hover:text-theme-primary transition-all"
               >
                 <HiShare className="w-5 h-5" />
               </button>
