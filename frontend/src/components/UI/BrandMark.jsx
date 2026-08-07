@@ -30,9 +30,10 @@ export default function BrandMark({ size = 'lg', className = '' }) {
   if (intensity <= 0) return null;
 
   const sizeClasses = {
-    md: 'h-14 md:h-20',
-    lg: 'h-20 md:h-28',
-    xl: 'h-24 md:h-36',
+    md: 'h-20 md:h-28',
+    lg: 'h-28 md:h-40',
+    xl: 'h-32 md:h-48',
+    xxl: 'h-40 md:h-64',
   };
 
   return (

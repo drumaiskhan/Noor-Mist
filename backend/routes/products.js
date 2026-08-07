@@ -5,6 +5,57 @@ const { authenticate, requireAdmin, optionalAuth } = require('../middleware/auth
 
 const router = express.Router();
 
+// ================================
+// XML helpers (used by export-xml / import-xml below)
+// ================================
+
+// Escape a value for safe inclusion as XML text content.
+function esc(value) {
+  if (value === null || value === undefined) return '';
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
+// Reverse of esc() — turn XML entities back into plain text.
+function unescXml(value) {
+  if (value === null || value === undefined) return '';
+  return String(value)
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&amp;/g, '&');
+}
+
+// Build a single `<name>value</name>` element with the value escaped.
+function xmlTag(name, value) {
+  return `<${name}>${esc(value)}</${name}>`;
+}
+
+// Return the raw inner content of every `<tagName>...</tagName>` block
+// found in xmlText (non-greedy — assumes tagName isn't nested inside itself).
+function getAllTags(xmlText, tagName) {
+  const results = [];
+  const regex = new RegExp(`<${tagName}>([\\s\\S]*?)<\\/${tagName}>`, 'g');
+  let match;
+  while ((match = regex.exec(xmlText)) !== null) {
+    results.push(match[1].trim());
+  }
+  return results;
+}
+
+// Return the unescaped text content of the first `<tagName>...</tagName>`
+// found inside block, or '' if not present.
+function getTag(block, tagName) {
+  const regex = new RegExp(`<${tagName}>([\\s\\S]*?)<\\/${tagName}>`);
+  const match = regex.exec(block);
+  return match ? unescXml(match[1].trim()) : '';
+}
+
 // Build product query with filters
 function buildProductQuery(params) {
   const conditions = ['p.is_visible = true'];
