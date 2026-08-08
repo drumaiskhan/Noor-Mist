@@ -81,7 +81,7 @@ export default function AnnouncementBar() {
   // Admin-controlled single message
   if (!useDefaults) {
     return (
-      <div className="bg-announcement text-xs font-montserrat font-medium relative">
+      <div className="bg-announcement text-xs font-montserrat font-medium relative z-50">
         <div className="flex items-center justify-center px-10 py-2.5">
           <span className="tracking-wide text-center">{settings.announcement_text}</span>
         </div>
@@ -100,7 +100,7 @@ export default function AnnouncementBar() {
   // Default rotating marketing messages (fallback)
   const current = DEFAULT_MESSAGES[currentIndex];
   return (
-    <div className="bg-announcement text-xs font-montserrat font-medium relative">
+    <div className="bg-announcement text-xs font-montserrat font-medium relative z-50">
       <div className="flex items-center justify-center px-10 py-2.5">
         <AnimatePresence mode="wait">
           <motion.div
