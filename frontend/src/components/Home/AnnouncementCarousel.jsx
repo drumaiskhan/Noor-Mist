@@ -130,7 +130,7 @@ export default function AnnouncementCarousel() {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: direction >= 0 ? -60 : 60 }}
             transition={{ duration: 0.35, ease: 'easeOut' }}
-            className={`grid grid-cols-1 md:grid-cols-2 items-stretch select-none ${
+            className={`flex flex-col items-stretch select-none ${
               announcements.length > 1 ? 'cursor-grab active:cursor-grabbing' : ''
             }`}
           >
@@ -140,7 +140,7 @@ export default function AnnouncementCarousel() {
               // this whole row — and the text column beside it — to
               // stretch to match, which is what left "Shop Now" stranded
               // with a big empty gap above and below it.
-              <div className="w-full h-48 sm:h-64 md:h-[420px] bg-black overflow-hidden order-1 md:order-2">
+              <div className="w-full aspect-[3/2] md:aspect-auto md:h-[420px] bg-black overflow-hidden">
                 <img
                   src={announcement.image_url}
                   alt={announcement.title}
@@ -153,11 +153,7 @@ export default function AnnouncementCarousel() {
               </div>
             )}
 
-            <div
-              className={`flex flex-col justify-center p-6 sm:p-10 text-center md:text-left order-2 md:order-1 ${
-                !announcement.image_url ? 'md:col-span-2 items-center text-center' : ''
-              }`}
-            >
+            <div className="flex flex-col items-center justify-center text-center p-6 sm:p-10">
               <h2 className="text-2xl sm:text-3xl font-playfair font-bold text-white mb-3">
                 {announcement.title}
               </h2>
@@ -172,7 +168,7 @@ export default function AnnouncementCarousel() {
                 <button
                   type="button"
                   onClick={goToButtonLink}
-                  className="self-center md:self-start inline-block bg-gold text-black px-7 py-2.5 rounded-xl font-semibold hover:scale-105 transition w-fit"
+                  className="inline-block bg-gold text-black px-7 py-2.5 rounded-xl font-semibold hover:scale-105 transition w-fit"
                 >
                   {announcement.button_text}
                 </button>
