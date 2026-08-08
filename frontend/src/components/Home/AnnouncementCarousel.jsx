@@ -37,6 +37,7 @@ export default function AnnouncementCarousel() {
   const navigate = useNavigate();
   const [current, setCurrent] = useState(0);
   const [direction, setDirection] = useState(0);
+  const [paused, setPaused] = useState(false);
 
   const { data } = useQuery({
     queryKey: ['announcements', 'active'],
@@ -44,19 +45,31 @@ export default function AnnouncementCarousel() {
       const { data } = await announcementsAPI.getActive();
       return Array.isArray(data) ? data : [];
     },
+    // Announcements are admin-managed and change rarely, but when they do
+    // (a new one added/removed) this strip should pick it up without a
+    // full page reload — same window the storefront homepage uses.
+    staleTime: 60 * 1000,
   });
 
   const announcements = data || [];
 
-  // Auto-advance
+  // If the active set shrinks (an announcement expires/gets disabled)
+  // while we're sitting on a now out-of-range slide, snap back to the
+  // start instead of freezing on a stale index.
   useEffect(() => {
-    if (announcements.length <= 1) return;
+    if (current >= announcements.length) setCurrent(0);
+  }, [announcements.length, current]);
+
+  // Auto-advance — paused while the user is hovering/interacting so a
+  // slide doesn't change out from under them mid-read or mid-swipe.
+  useEffect(() => {
+    if (announcements.length <= 1 || paused) return;
     const timer = setInterval(() => {
       setDirection(1);
       setCurrent((prev) => (prev + 1) % announcements.length);
     }, 5000);
     return () => clearInterval(timer);
-  }, [announcements.length]);
+  }, [announcements.length, paused]);
 
   if (announcements.length === 0) return null;
 
@@ -93,21 +106,33 @@ export default function AnnouncementCarousel() {
   };
 
   return (
-    <section className="bg-noir-card border-b border-gold/10 overflow-hidden">
+    <section
+      className="bg-noir-card border-b border-gold/10 overflow-hidden"
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+    >
       <div className="max-w-7xl mx-auto relative">
         <AnimatePresence mode="wait" custom={direction}>
           <motion.div
             key={safeIndex}
             custom={direction}
-            drag="x"
+            drag={announcements.length > 1 ? 'x' : false}
             dragConstraints={{ left: 0, right: 0 }}
             dragElastic={0.2}
-            onDragEnd={handleDragEnd}
+            onDragStart={() => setPaused(true)}
+            onDragEnd={(e, info) => { handleDragEnd(e, info); setPaused(false); }}
+            // Lets the browser still handle vertical page scrolling on
+            // touch devices while horizontal drag is used for swipe —
+            // without this, a vertical scroll starting on the slide can
+            // get captured as a (failed) horizontal drag instead.
+            style={{ touchAction: 'pan-y' }}
             initial={{ opacity: 0, x: direction >= 0 ? 60 : -60 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: direction >= 0 ? -60 : 60 }}
             transition={{ duration: 0.35, ease: 'easeOut' }}
-            className="grid grid-cols-1 md:grid-cols-2 items-stretch cursor-grab active:cursor-grabbing select-none"
+            className={`grid grid-cols-1 md:grid-cols-2 items-stretch select-none ${
+              announcements.length > 1 ? 'cursor-grab active:cursor-grabbing' : ''
+            }`}
           >
             {announcement.image_url && (
               <div className="w-full h-48 sm:h-64 md:h-full md:min-h-[280px] bg-black overflow-hidden order-1 md:order-2">

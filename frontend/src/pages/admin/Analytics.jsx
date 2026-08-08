@@ -34,6 +34,17 @@ export default function Analytics() {
     }
   });
 
+  // Total customer count isn't period-scoped, so it comes from the
+  // dashboard summary instead of being hardcoded to 0 like it was before.
+  const { data: dashboardData } = useQuery({
+    queryKey: ['analytics', 'dashboard'],
+    queryFn: async () => {
+      const res = await analyticsAPI.getDashboard();
+      return res.data;
+    },
+    staleTime: 60 * 1000,
+  });
+
 
   const salesData = data?.data || [];
 
@@ -49,7 +60,7 @@ export default function Analytics() {
       0
     ),
 
-    customers: 0,
+    customers: dashboardData?.customers ?? 0,
 
     conversionRate: 0
   };
@@ -155,7 +166,7 @@ export default function Analytics() {
 
         <StatCard
           title="Conversion"
-          value={`${stats.conversionRate}%`}
+          value={stats.conversionRate ? `${stats.conversionRate}%` : '—'}
           icon={HiTrendingUp}
         />
 

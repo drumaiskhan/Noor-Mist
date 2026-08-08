@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
@@ -10,6 +10,13 @@ import { formatPrice } from '../../utils/helpers';
 // Color is fully theme-driven via --announcement-bg / --announcement-text,
 // both set by themeStore from admin Theme Editor settings.
 // Text is admin-controlled from Settings → Announcement Bar.
+// The dismiss button used to only set local component state, so the bar
+// came right back on the next page navigation or refresh — reading as "the
+// X doesn't work". Persisting which message was dismissed (keyed to its
+// text) fixes that, while still automatically reappearing if the admin
+// changes the announcement to something new.
+const DISMISS_KEY = 'noor_mist_announcement_dismissed';
+
 export default function AnnouncementBar() {
   const [dismissed, setDismissed] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -22,6 +29,32 @@ export default function AnnouncementBar() {
     },
     staleTime: 5 * 60 * 1000,
   });
+
+  // Re-check dismissal once we know what message is actually showing —
+  // dismissing the default rotating messages shouldn't hide a later
+  // admin-set announcement, and vice versa.
+  useEffect(() => {
+    const key = !settings.announcement_enabled || !settings.announcement_text
+      ? 'default'
+      : settings.announcement_text;
+    try {
+      setDismissed(localStorage.getItem(DISMISS_KEY) === key);
+    } catch {
+      // localStorage unavailable (private browsing, etc) — just don't persist.
+    }
+  }, [settings.announcement_enabled, settings.announcement_text]);
+
+  const dismiss = () => {
+    const key = !settings.announcement_enabled || !settings.announcement_text
+      ? 'default'
+      : settings.announcement_text;
+    try {
+      localStorage.setItem(DISMISS_KEY, key);
+    } catch {
+      // ignore
+    }
+    setDismissed(true);
+  };
 
   const freeShippingThreshold = settings.free_shipping_threshold !== undefined
     ? Number(settings.free_shipping_threshold) : 5000;
@@ -53,8 +86,9 @@ export default function AnnouncementBar() {
           <span className="tracking-wide text-center">{settings.announcement_text}</span>
         </div>
         <button
-          onClick={() => setDismissed(true)}
-          className="absolute top-1/2 right-3 -translate-y-1/2 hover:opacity-60 transition-opacity"
+          type="button"
+          onClick={dismiss}
+          className="absolute top-1/2 right-3 -translate-y-1/2 hover:opacity-60 transition-opacity z-10"
           aria-label="Dismiss announcement"
         >
           <HiX className="w-3.5 h-3.5" />
@@ -83,7 +117,8 @@ export default function AnnouncementBar() {
         </AnimatePresence>
       </div>
       <button
-        onClick={() => setDismissed(true)}
+        type="button"
+        onClick={dismiss}
         className="absolute top-1/2 right-3 -translate-y-1/2 hover:opacity-60 transition-opacity z-10"
         aria-label="Dismiss"
       >

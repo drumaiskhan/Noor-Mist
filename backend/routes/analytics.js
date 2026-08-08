@@ -110,8 +110,41 @@ router.get('/sales', requireAdmin, async (req, res) => {
       GROUP BY 1 ORDER BY 1 ASC
     `);
 
-    res.json({ data: result.rows, period });
+    // node-pg returns NUMERIC columns (orders.total_amount) as strings, not
+    // numbers, so the recharts <Line dataKey="revenue"> below was plotting
+    // string values it couldn't actually chart. Coerce to real numbers, and
+    // format the period label so the X axis shows something readable
+    // instead of a raw ISO timestamp.
+    const data = result.rows.map((row) => ({
+      period: new Date(row.period).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      orders: parseInt(row.orders, 10),
+      revenue: parseFloat(row.revenue),
+    }));
+
+    // The frontend's Top Products table reads this from the /sales
+    // response, but this endpoint never sent it (only /dashboard did) —
+    // so the table always rendered "No product sales yet" regardless of
+    // real sales. Scope it to the same window being charted.
+    const topProductsResult = await query(`
+      SELECT p.name, SUM(oi.quantity) as sold, SUM(oi.subtotal) as revenue
+      FROM order_items oi
+      JOIN products p ON oi.product_id = p.id
+      JOIN orders o ON oi.order_id = o.id
+      WHERE o.created_at >= NOW() - INTERVAL '${intervals[period] || '7 days'}'
+        AND o.status NOT IN ('cancelled','refunded')
+      GROUP BY p.id, p.name
+      ORDER BY sold DESC
+      LIMIT 5
+    `);
+    const topProducts = topProductsResult.rows.map((row) => ({
+      name: row.name,
+      sold: parseInt(row.sold, 10),
+      revenue: parseFloat(row.revenue),
+    }));
+
+    res.json({ data, topProducts, period });
   } catch (error) {
+    console.error(error);
     res.status(500).json({ error: 'Failed to fetch sales data' });
   }
 });

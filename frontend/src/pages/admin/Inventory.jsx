@@ -1,21 +1,66 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { inventoryAPI } from '../../services/api';
-import { HiExclamation, HiCheckCircle, HiArchive } from 'react-icons/hi';
-import { formatPrice } from '../../utils/helpers';
+import { HiExclamation, HiCheckCircle, HiArchive, HiPencil, HiCheck, HiX } from 'react-icons/hi';
+import toast from 'react-hot-toast';
 
 export default function Inventory() {
-  const { data, isLoading } = useQuery({
+  const queryClient = useQueryClient();
+  const [editing, setEditing] = useState(null); // { productId, variantId } | null
+  const [draftQty, setDraftQty] = useState('');
+
+  const { data, isLoading, isError } = useQuery({
     queryKey: ['inventory'],
     queryFn: inventoryAPI.getOverview,
   });
 
-  const items = data?.data?.items || [];
+  // The API groups stock by product, with each product carrying a `variants`
+  // array (size/sku/quantity per bottle size) — flatten that into one row
+  // per variant so the table below has something to render.
+  const products = data?.data?.inventory || [];
+  const rows = products.flatMap((product) =>
+    (product.variants || []).map((variant) => ({
+      productId: product.product_id,
+      productName: product.name,
+      brand: product.brand,
+      ...variant,
+    }))
+  );
 
-  const totalStock = items.reduce((sum, item) => sum + (item.total_quantity || 0), 0);
-  const lowStockItems = items.filter((item) => item.total_quantity <= 10 && item.total_quantity > 0);
-  const outOfStockItems = items.filter((item) => item.total_quantity === 0);
+  const totalStock = rows.reduce((sum, row) => sum + (row.quantity || 0), 0);
+  const lowStockItems = rows.filter((row) => row.quantity > 0 && row.quantity <= 10);
+  const outOfStockItems = rows.filter((row) => row.quantity === 0);
+
+  const updateMutation = useMutation({
+    mutationFn: ({ productId, variantId, quantity }) =>
+      inventoryAPI.updateStock(productId, variantId, quantity),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['inventory'] });
+      toast.success('Stock updated');
+      setEditing(null);
+    },
+    onError: (err) => toast.error(err.response?.data?.error || 'Failed to update stock'),
+  });
+
+  const startEdit = (row) => {
+    setEditing({ productId: row.productId, variantId: row.id });
+    setDraftQty(String(row.quantity));
+  };
+
+  const cancelEdit = () => {
+    setEditing(null);
+    setDraftQty('');
+  };
+
+  const saveEdit = () => {
+    const quantity = parseInt(draftQty, 10);
+    if (Number.isNaN(quantity) || quantity < 0) {
+      toast.error('Enter a valid quantity');
+      return;
+    }
+    updateMutation.mutate({ ...editing, quantity });
+  };
 
   return (
     <div className="space-y-8">
@@ -52,40 +97,103 @@ export default function Inventory() {
                 <th className="text-left p-4 text-sm text-gray-400 font-montserrat">SKU</th>
                 <th className="text-left p-4 text-sm text-gray-400 font-montserrat">Stock</th>
                 <th className="text-left p-4 text-sm text-gray-400 font-montserrat">Status</th>
+                <th className="text-right p-4 text-sm text-gray-400 font-montserrat">Action</th>
               </tr>
             </thead>
             <tbody>
-              {items.map((item, index) => (
-                <motion.tr
-                  key={item.id || index}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: index * 0.05 }}
-                  className="border-b border-gray-800/50 hover:bg-gold/5"
-                >
-                  <td className="p-4 text-white text-sm">{item.product_name}</td>
-                  <td className="p-4 text-gray-400 text-sm">{item.size_ml}ml</td>
-                  <td className="p-4 text-gray-400 text-sm font-mono">{item.sku}</td>
-                  <td className="p-4">
-                    <span className={`text-sm font-bold ${
-                      item.quantity === 0 ? 'text-red-400' :
-                      item.quantity <= 10 ? 'text-yellow-400' : 'text-green-400'
-                    }`}>
-                      {item.quantity}
-                    </span>
-                  </td>
-                  <td className="p-4">
-                    <span className={`text-xs px-2 py-1 rounded-full ${
-                      item.quantity === 0 ? 'bg-red-500/10 text-red-400' :
-                      item.quantity <= 10 ? 'bg-yellow-500/10 text-yellow-400' :
-                      'bg-green-500/10 text-green-400'
-                    }`}>
-                      {item.quantity === 0 ? 'Out of Stock' :
-                       item.quantity <= 10 ? 'Low Stock' : 'In Stock'}
-                    </span>
-                  </td>
-                </motion.tr>
-              ))}
+              {isLoading && (
+                <tr>
+                  <td colSpan={6} className="p-6 text-center text-gray-400 text-sm">Loading inventory…</td>
+                </tr>
+              )}
+              {isError && (
+                <tr>
+                  <td colSpan={6} className="p-6 text-center text-red-400 text-sm">Failed to load inventory.</td>
+                </tr>
+              )}
+              {!isLoading && !isError && rows.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="p-6 text-center text-gray-400 text-sm">No inventory found.</td>
+                </tr>
+              )}
+              {rows.map((row, index) => {
+                const isEditingRow = editing?.productId === row.productId && editing?.variantId === row.id;
+                return (
+                  <motion.tr
+                    key={`${row.productId}-${row.id}`}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: index * 0.03 }}
+                    className="border-b border-gray-800/50 hover:bg-gold/5"
+                  >
+                    <td className="p-4 text-white text-sm">{row.productName}</td>
+                    <td className="p-4 text-gray-400 text-sm">{row.size_ml}ml</td>
+                    <td className="p-4 text-gray-400 text-sm font-mono">{row.sku}</td>
+                    <td className="p-4">
+                      {isEditingRow ? (
+                        <input
+                          type="number"
+                          min="0"
+                          autoFocus
+                          value={draftQty}
+                          onChange={(e) => setDraftQty(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') saveEdit();
+                            if (e.key === 'Escape') cancelEdit();
+                          }}
+                          className="w-20 bg-noir border border-gold/40 rounded px-2 py-1 text-white text-sm focus:border-gold outline-none"
+                        />
+                      ) : (
+                        <span className={`text-sm font-bold ${
+                          row.quantity === 0 ? 'text-red-400' :
+                          row.quantity <= 10 ? 'text-yellow-400' : 'text-green-400'
+                        }`}>
+                          {row.quantity}
+                        </span>
+                      )}
+                    </td>
+                    <td className="p-4">
+                      <span className={`text-xs px-2 py-1 rounded-full ${
+                        row.quantity === 0 ? 'bg-red-500/10 text-red-400' :
+                        row.quantity <= 10 ? 'bg-yellow-500/10 text-yellow-400' :
+                        'bg-green-500/10 text-green-400'
+                      }`}>
+                        {row.quantity === 0 ? 'Out of Stock' :
+                         row.quantity <= 10 ? 'Low Stock' : 'In Stock'}
+                      </span>
+                    </td>
+                    <td className="p-4 text-right">
+                      {isEditingRow ? (
+                        <div className="flex items-center justify-end gap-1">
+                          <button
+                            onClick={saveEdit}
+                            disabled={updateMutation.isLoading}
+                            className="p-1.5 text-green-400 hover:bg-green-400/10 rounded-lg transition-colors"
+                            title="Save"
+                          >
+                            <HiCheck className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={cancelEdit}
+                            className="p-1.5 text-gray-400 hover:bg-gray-700/40 rounded-lg transition-colors"
+                            title="Cancel"
+                          >
+                            <HiX className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => startEdit(row)}
+                          className="p-1.5 text-gold/60 hover:text-gold hover:bg-gold/10 rounded-lg transition-colors"
+                          title="Update stock"
+                        >
+                          <HiPencil className="w-4 h-4" />
+                        </button>
+                      )}
+                    </td>
+                  </motion.tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

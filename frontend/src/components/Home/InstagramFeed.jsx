@@ -2,19 +2,16 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { FaInstagram } from 'react-icons/fa';
 
-const defaultPosts = [
-  { id: 1, image: 'https://res.cloudinary.com/demo/image/upload/v1/noor-mist/instagram/1.jpg', likes: '2.4K', comments: '128' },
-  { id: 2, image: 'https://res.cloudinary.com/demo/image/upload/v1/noor-mist/instagram/2.jpg', likes: '1.8K', comments: '95' },
-  { id: 3, image: 'https://res.cloudinary.com/demo/image/upload/v1/noor-mist/instagram/3.jpg', likes: '3.2K', comments: '210' },
-  { id: 4, image: 'https://res.cloudinary.com/demo/image/upload/v1/noor-mist/instagram/4.jpg', likes: '2.1K', comments: '156' },
-  { id: 5, image: 'https://res.cloudinary.com/demo/image/upload/v1/noor-mist/instagram/5.jpg', likes: '4.5K', comments: '320' },
-  { id: 6, image: 'https://res.cloudinary.com/demo/image/upload/v1/noor-mist/instagram/6.jpg', likes: '1.5K', comments: '87' },
-];
-
 export default function InstagramFeed({ data = {} }) {
-  const posts = data.posts?.length > 0 ? data.posts : defaultPosts;
+  // The old fallback pointed at demo Cloudinary URLs that don't actually
+  // exist, so with no real posts configured the grid just showed six
+  // broken-image icons. Better to show nothing until the admin adds real
+  // posts (Admin → Homepage Builder → Instagram section) than to fake it.
+  const posts = data.posts?.length > 0 ? data.posts : [];
   const handle = data.handle || '@noormist';
   const instagramUrl = `https://instagram.com/${handle.replace(/^@/, '')}`;
+
+  if (posts.length === 0) return null;
 
   return (
     <section className="py-16 md:py-24 bg-noir">
@@ -64,6 +61,7 @@ export default function InstagramFeed({ data = {} }) {
                 alt={`Instagram post ${post.id}`}
                 className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                 loading="lazy"
+                onError={(e) => { e.currentTarget.closest('a').style.display = 'none'; }}
               />
               {/* Hover Overlay */}
               <div className="absolute inset-0 bg-theme-bg/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
