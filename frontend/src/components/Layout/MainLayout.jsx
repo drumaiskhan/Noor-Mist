@@ -11,7 +11,6 @@ import CartDrawer from '../Cart/CartDrawer';
 import SearchBar from '../Shop/SearchBar';
 
 import AnnouncementBar from './AnnouncementBar';
-import AnnouncementPopup from '../UI/AnnouncementPopup';
 
 import useUIStore from '../../store/uiStore';
 
@@ -82,12 +81,6 @@ export default function MainLayout() {
   return (
 
     <div className="min-h-screen bg-noir flex flex-col">
-
-
-      {/* Full screen image announcement popup */}
-      <AnnouncementPopup />
-
-
 
       {/* Small announcement strip */}
       <AnnouncementBar />

@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { homepageAPI, collectionsAPI } from "../services/api";
 
 import HeroBanner from "../components/Home/HeroBanner";
+import AnnouncementCarousel from "../components/Home/AnnouncementCarousel";
 import PerfumeFinder from "../components/Home/PerfumeFinder";
 import Collections from "../components/Home/Collections";
 import BestSellers from "../components/Home/BestSellers";
@@ -89,6 +90,9 @@ export default function Home() {
 
       </Helmet>
 
+
+      {/* Announcements — swipeable strip, admin-managed */}
+      <AnnouncementCarousel />
 
       {/* Hero */}
       <HeroBanner

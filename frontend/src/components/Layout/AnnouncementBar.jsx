@@ -67,7 +67,7 @@ export default function AnnouncementBar() {
   const current = DEFAULT_MESSAGES[currentIndex];
   return (
     <div className="bg-announcement text-xs font-montserrat font-medium relative">
-      <div className="flex items-center justify-center px-10 py-2.5 pointer-events-none">
+      <div className="flex items-center justify-center px-10 py-2.5">
         <AnimatePresence mode="wait">
           <motion.div
             key={currentIndex}
@@ -75,7 +75,6 @@ export default function AnnouncementBar() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.3 }}
-            className="pointer-events-auto"
           >
             <Link to={current.link} className="hover:underline tracking-wide">
               {current.text}
@@ -85,9 +84,8 @@ export default function AnnouncementBar() {
       </div>
       <button
         onClick={() => setDismissed(true)}
-        className="hover:opacity-60 transition-opacity"
+        className="absolute top-1/2 right-3 -translate-y-1/2 hover:opacity-60 transition-opacity z-10"
         aria-label="Dismiss"
-        style={{ position: 'fixed', top: '9px', right: '12px', zIndex: 100 }}
       >
         <HiX className="w-3.5 h-3.5" />
       </button>

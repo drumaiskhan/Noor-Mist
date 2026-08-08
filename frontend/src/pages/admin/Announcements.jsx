@@ -111,7 +111,7 @@ export default function Announcements() {
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ["announcements"] });
-    // The storefront popup query - keep it in sync so a newly saved
+    // The storefront banner query - keep it in sync so a newly saved
     // announcement (or an edited schedule) shows up without a hard refresh.
     queryClient.invalidateQueries({ queryKey: ["announcements", "active"] });
   };
@@ -279,7 +279,7 @@ export default function Announcements() {
         <div>
           <h1 className="text-3xl font-playfair font-bold">Announcements</h1>
           <p className="text-gray-400 mt-2">
-            Manage popup offers and promotions
+            Manage the homepage announcement banner — shown above the hero, swipeable if you add more than one
           </p>
         </div>
 
@@ -396,7 +396,7 @@ export default function Announcements() {
             />
           )}
 
-          {/* SCHEDULE: start / end date so the popup auto-enables and
+          {/* SCHEDULE: start / end date so the banner auto-enables and
               auto-expires without an admin needing to remember to toggle
               it off */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
@@ -429,7 +429,7 @@ export default function Announcements() {
 
           <p className="text-xs text-gray-500 mb-4">
             Leave either date blank for no limit. Outside this window the
-            popup automatically stops showing on the storefront - no need to
+            banner automatically stops showing on the homepage - no need to
             manually disable it.
           </p>
 
