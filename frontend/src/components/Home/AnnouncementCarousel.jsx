@@ -140,7 +140,7 @@ export default function AnnouncementCarousel() {
               // this whole row — and the text column beside it — to
               // stretch to match, which is what left "Shop Now" stranded
               // with a big empty gap above and below it.
-              <div className="w-full aspect-[3/2] md:aspect-auto md:h-[420px] bg-black overflow-hidden">
+              <div className="w-full aspect-[3/2] bg-black overflow-hidden">
                 <img
                   src={announcement.image_url}
                   alt={announcement.title}
