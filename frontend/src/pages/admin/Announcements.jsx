@@ -80,7 +80,6 @@ const fromDatetimeLocal = (value) => {
   const d = new Date(value);
   return Number.isNaN(d.getTime()) ? "" : d.toISOString();
 };
-};
 
 // Where an announcement currently stands relative to its schedule, so the
 // admin isn't left guessing why a "Disabled" one still says nothing about
