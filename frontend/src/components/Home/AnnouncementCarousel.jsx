@@ -135,7 +135,12 @@ export default function AnnouncementCarousel() {
             }`}
           >
             {announcement.image_url && (
-              <div className="w-full h-48 sm:h-64 md:h-full md:min-h-[280px] bg-black overflow-hidden order-1 md:order-2">
+              // A fixed, sane height (rather than the old open-ended
+              // md:h-full) stops a tall/portrait promo image from forcing
+              // this whole row — and the text column beside it — to
+              // stretch to match, which is what left "Shop Now" stranded
+              // with a big empty gap above and below it.
+              <div className="w-full h-48 sm:h-64 md:h-[420px] bg-black overflow-hidden order-1 md:order-2">
                 <img
                   src={announcement.image_url}
                   alt={announcement.title}
