@@ -52,7 +52,8 @@ const collectionSlugFromLink = (link) => {
 };
 
 // Converts a value from the DB (ISO timestamp string or null) into the
-// "YYYY-MM-DDTHH:mm" shape a <input type="datetime-local"> needs.
+// "YYYY-MM-DDTHH:mm" shape a <input type="datetime-local"> needs. This
+// correctly shows the local wall-clock time for a stored UTC instant.
 const toDatetimeLocal = (value) => {
   if (!value) return "";
   const d = new Date(value);
@@ -61,6 +62,24 @@ const toDatetimeLocal = (value) => {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
     d.getHours()
   )}:${pad(d.getMinutes())}`;
+};
+
+// The inverse of toDatetimeLocal, and the piece that was missing: the
+// browser's datetime-local value ("2026-08-08T20:00") is a *local* wall
+// clock time with no timezone info. Sending that string to the backend
+// as-is meant it got stored in the DB verbatim and later compared against
+// NOW() (UTC) with zero timezone conversion - so for anyone east of UTC
+// (like PKT, UTC+5) a start_date meant to be "right now" actually landed
+// hours in the future from the DB's point of view, and the announcement's
+// active-window check (`start_date <= NOW()`) would keep failing until
+// real UTC time caught up. That's what made an edited/scheduled
+// announcement quietly vanish from the storefront. Converting to a real
+// UTC ISO string before it's sent fixes the round trip both ways.
+const fromDatetimeLocal = (value) => {
+  if (!value) return "";
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? "" : d.toISOString();
+};
 };
 
 // Where an announcement currently stands relative to its schedule, so the
@@ -255,8 +274,10 @@ export default function Announcements() {
       ...form,
       // Empty strings mean "no schedule" / "clear the schedule" - send them
       // through as-is so the backend can tell "clear" apart from "unset".
-      start_date: form.start_date || "",
-      end_date: form.end_date || "",
+      // Non-empty values need converting from the input's local wall-clock
+      // string to a real UTC instant - see fromDatetimeLocal above.
+      start_date: fromDatetimeLocal(form.start_date),
+      end_date: fromDatetimeLocal(form.end_date),
     };
 
     if (editingId) {
