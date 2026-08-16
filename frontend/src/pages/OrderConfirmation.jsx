@@ -53,7 +53,14 @@ export default function OrderConfirmation() {
                 <div className="bg-noir rounded-lg p-4 mb-6 text-sm text-theme-muted">
                   Your order is now being prepared. Expected delivery is approximately <strong className="text-theme-text">{deliveryEstimate}</strong>.
                 </div>
-                <Link to="/shop" className="btn-gold inline-block">Continue Shopping</Link>
+                <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                  <Link to="/shop" className="btn-gold inline-block">Continue Shopping</Link>
+                  {state.order?.order_number && (
+                    <Link to={`/track-order?tracking=${encodeURIComponent(state.order.order_number)}`} className="btn-outline-gold inline-block">
+                      Track Your Order
+                    </Link>
+                  )}
+                </div>
               </>
             )}
           </div>

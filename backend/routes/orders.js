@@ -328,17 +328,22 @@ router.get('/', authenticate, async (req, res) => {
   } catch (error) { console.error(error); res.status(500).json({ error: 'Failed to fetch orders' }); }
 });
 
-// GET /api/orders/track/:trackingNumber — public customer tracking lookup
+// GET /api/orders/track/:trackingNumber — public customer tracking lookup.
+// Accepts either the carrier tracking number OR the site's own order number
+// (e.g. "NM-XXXXX"), since a customer may be looking this up before the
+// order has shipped and only has their order number to go on.
 router.get('/track/:trackingNumber', async (req, res) => {
   try {
-    const trackingNumber = String(req.params.trackingNumber || '').trim();
-    if (!trackingNumber || trackingNumber.length > 120) return res.status(400).json({ error: 'A valid tracking number is required.' });
+    const value = String(req.params.trackingNumber || '').trim().replace(/^#/, '');
+    if (!value || value.length > 120) return res.status(400).json({ error: 'A valid tracking number or order number is required.' });
     const result = await query(
       `SELECT id, order_number, status, tracking_number, tracking_carrier, tracking_url, created_at, shipped_at, delivered_at
-       FROM orders WHERE LOWER(TRIM(tracking_number)) = LOWER(TRIM($1)) LIMIT 1`,
-      [trackingNumber]
+       FROM orders
+       WHERE LOWER(TRIM(tracking_number)) = LOWER(TRIM($1)) OR LOWER(TRIM(order_number)) = LOWER(TRIM($1))
+       LIMIT 1`,
+      [value]
     );
-    if (!result.rows.length) return res.status(404).json({ error: 'Tracking number not found.' });
+    if (!result.rows.length) return res.status(404).json({ error: 'We could not find an order with that tracking number or order number.' });
     const order = result.rows[0];
     const history = await query(
       `SELECT status, note, tracking_number, tracking_carrier, tracking_url, created_at

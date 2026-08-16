@@ -193,18 +193,29 @@ export default function Orders() {
   });
 
   const updateStatusMutation = useMutation({
-    mutationFn: ({ id, status, tracking_number }) =>
-      orderAPI.updateStatus(id, tracking_number !== undefined ? { status, tracking_number } : status),
+    mutationFn: ({ id, status, tracking_number, tracking_carrier, tracking_url }) =>
+      orderAPI.updateStatus(
+        id,
+        tracking_number !== undefined || tracking_carrier !== undefined || tracking_url !== undefined
+          ? { status, tracking_number, tracking_carrier, tracking_url }
+          : status
+      ),
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['adminOrders'] });
       toast.success(
-        variables.tracking_number !== undefined && variables.__trackingOnly
-          ? 'Tracking number saved'
+        variables.__trackingOnly
+          ? 'Tracking info saved'
           : 'Order status updated successfully'
       );
       setSelectedOrder((prev) =>
         prev
-          ? { ...prev, status: variables.status, tracking_number: variables.tracking_number ?? prev.tracking_number }
+          ? {
+              ...prev,
+              status: variables.status,
+              tracking_number: variables.tracking_number ?? prev.tracking_number,
+              tracking_carrier: variables.tracking_carrier ?? prev.tracking_carrier,
+              tracking_url: variables.tracking_url ?? prev.tracking_url,
+            }
           : prev
       );
     },
@@ -760,16 +771,7 @@ export default function Orders() {
                           )}
                         </div>
                       )}
-                    
-                  <div className="grid md:grid-cols-2 gap-3 mt-3">
-                    <div>
-                      <label className="text-xs text-gray-400 mb-1 block">Delivery Service / Carrier</label>
-                      <select value={carrierInput} onChange={e=>setCarrierInput(e.target.value)} className="w-full bg-noir border border-gray-700 rounded-lg px-3 py-2.5 text-white text-sm">
-                        <option value="">Select carrier</option><option value="TCS">TCS</option><option value="Leopards">Leopards</option><option value="M&P">M&P</option><option value="Trax">Trax</option><option value="PostEx">PostEx</option><option value="BlueEx">BlueEx</option><option value="DHL">DHL</option><option value="FedEx">FedEx</option><option value="UPS">UPS</option><option value="Other">Other</option>
-                      </select>
                     </div>
-                    <div><label className="text-xs text-gray-400 mb-1 block">Tracking URL (optional)</label><input value={trackingUrlInput} onChange={e=>setTrackingUrlInput(e.target.value)} placeholder="https://carrier.com/track/..." className="w-full bg-noir border border-gray-700 rounded-lg px-3 py-2.5 text-white text-sm"/></div>
-                  </div></div>
                   </div>
                 )}
 

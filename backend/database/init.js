@@ -32,7 +32,7 @@ async function initDatabase() {
       { key: 'sadapay', label: 'SadaPay', description: 'Digital payment via SadaPay', order: 5, enabled: false, requires_proof: true },
       { key: 'nayapay', label: 'NayaPay', description: 'Digital payment via NayaPay', order: 6, enabled: false, requires_proof: true },
       { key: 'raast', label: 'Raast', description: 'SBP instant payment system', order: 7, enabled: false, requires_proof: true },
-      { key: 'card', label: 'Debit / Credit Card', description: 'Coming soon — card payments', order: 8, enabled: false, requires_proof: false },
+      { key: 'card', label: 'Debit / Credit Card', description: 'Pay securely by card via Safepay', order: 8, enabled: false, requires_proof: false },
     ];
     for (const m of defaultMethods) {
       await query(
@@ -41,6 +41,18 @@ async function initDatabase() {
         [m.key, m.label, m.description, m.order, m.enabled, m.requires_proof]
       );
     }
+
+    // The 'card' row's description was seeded as "Coming soon — card
+    // payments" back when Safepay wasn't wired up yet. That text is stale on
+    // any database created before this build, and ON CONFLICT DO NOTHING
+    // above never touches it. Refresh it here — but only if it still has the
+    // old default text, so an admin's own custom description is never
+    // overwritten.
+    await query(
+      `UPDATE payment_methods SET description=$1, updated_at=NOW()
+       WHERE key='card' AND description='Coming soon — card payments'`,
+      ['Pay securely by card via Safepay']
+    );
 
     // Seed default digital wallets
     const defaultWallets = ['easypaisa', 'jazzcash', 'sadapay', 'nayapay', 'raast'];

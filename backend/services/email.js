@@ -550,11 +550,17 @@ const sendOrderStatusUpdateEmail = async (order, previousStatus) => {
   const key = STATUS_TEMPLATE_MAP[order.status];
   if (!key || order.status === previousStatus) return;
   const tpl = await getTemplate(key);
+  const siteTrackLink = `${getPublicSiteUrl(settings)}/track-order?tracking=${encodeURIComponent(order.order_number)}`;
+  const trackingLineParts = [];
+  if (order.tracking_carrier) trackingLineParts.push(`<p>Delivery service: <strong>${escapeHtml(order.tracking_carrier)}</strong></p>`);
+  if (order.tracking_number) trackingLineParts.push(`<p>Tracking number: <strong>${escapeHtml(order.tracking_number)}</strong></p>`);
+  if (order.tracking_url) trackingLineParts.push(`<p><a href="${escapeHtml(order.tracking_url)}">Track with ${escapeHtml(order.tracking_carrier || 'the courier')}</a></p>`);
+  trackingLineParts.push(`<p><a href="${siteTrackLink}">Track your order on our site</a></p>`);
   const vars = {
     customer_name: escapeHtml(recipient.name || 'Customer'),
     order_number: escapeHtml(order.order_number),
     store_name: escapeHtml(settings.email_from_name || 'Noor Mist'),
-    tracking_line: order.tracking_number ? `<p>Tracking number: <strong>${escapeHtml(order.tracking_number)}</strong></p>${order.tracking_url ? `<p><a href="${escapeHtml(order.tracking_url)}">Track your shipment</a></p>` : ''}` : '',
+    tracking_line: trackingLineParts.join(''),
     tracking_number: escapeHtml(order.tracking_number || ''),
     tracking_url: escapeHtml(order.tracking_url || ''),
     currency: escapeHtml(settings.currency || '₨'),

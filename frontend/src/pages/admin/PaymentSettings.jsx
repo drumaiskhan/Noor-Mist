@@ -117,15 +117,27 @@ function PaymentMethodsTab({ qc }) {
   const { data, isLoading } = useQuery({ queryKey: ['adminMethods'], queryFn: async () => (await paymentAPI.getAdminMethods()).data });
   const { data: walletsData } = useQuery({ queryKey: ['adminWallets'], queryFn: async () => (await paymentAPI.getAdminWallets()).data });
 
-  const updateMutation = useMutation({
-    mutationFn: ({ key, data }) => paymentAPI.updateMethod(key, data),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['adminMethods'] }); toast.success('Saved'); },
-    onError: (err) => toast.error(err?.response?.data?.error || 'Failed to save'),
-  });
-
   const [editing, setEditing] = useState({});
   const [qrFiles, setQrFiles] = useState({});
   const [savingWallet, setSavingWallet] = useState({});
+
+  const updateMutation = useMutation({
+    mutationFn: ({ key, data }) => paymentAPI.updateMethod(key, data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['adminMethods'] }); toast.success('Saved'); },
+    onError: (err, variables) => {
+      toast.error(err?.response?.data?.error || 'Failed to save');
+      // The toggle flips optimistically before the request resolves — if the
+      // backend rejected it (e.g. trying to enable Card with no Safepay keys
+      // on file yet), undo just the optimistic flip so the switch doesn't
+      // sit on "enabled" while the database still has it off. Leave any
+      // other in-progress edits (and the open panel) untouched.
+      const key = variables?.key;
+      if (key && variables?.data && Object.prototype.hasOwnProperty.call(variables.data, 'is_enabled')) {
+        const serverValue = data?.methods?.find((m) => m.key === key)?.is_enabled ?? false;
+        setEditing((prev) => (prev[key] ? { ...prev, [key]: { ...prev[key], is_enabled: serverValue } } : prev));
+      }
+    },
+  });
 
   if (isLoading) return <div className="flex justify-center py-20"><HiRefresh className="w-6 h-6 text-gold animate-spin" /></div>;
   const methods = data?.methods || [];

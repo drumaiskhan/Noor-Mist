@@ -17,7 +17,7 @@ export default function TrackOrder() {
 
   const lookup = async (value = trackingNumber) => {
     const number = String(value || '').trim();
-    if (!number) { setError('Enter your tracking number.'); return; }
+    if (!number) { setError('Enter your tracking number or order number.'); return; }
     setLoading(true); setError(''); setResult(null);
     try {
       const { data } = await orderAPI.track(number);
@@ -41,11 +41,11 @@ export default function TrackOrder() {
           <HiTruck className="w-12 h-12 mx-auto text-gold mb-4" />
           <p className="text-gold text-xs uppercase tracking-[0.35em] font-montserrat mb-3">Shipment Tracking</p>
           <h1 className="text-4xl md:text-5xl font-playfair font-bold">Track Your Order</h1>
-          <p className="text-theme-muted mt-3">Enter the tracking number provided in your shipping email.</p>
+          <p className="text-theme-muted mt-3">Enter your order number (from your confirmation email) or the tracking number from your shipping email — or use the "Track Order" link sent to you directly.</p>
         </div>
 
         <form onSubmit={e => { e.preventDefault(); lookup(); }} className="luxury-card p-4 md:p-5 flex flex-col md:flex-row gap-3 mb-8">
-          <input value={trackingNumber} onChange={e=>setTrackingNumber(e.target.value)} placeholder="Enter tracking number" className="flex-1 bg-noir border border-theme-border rounded-lg px-4 py-3 text-theme-text outline-none focus:border-theme-primary" autoComplete="off" />
+          <input value={trackingNumber} onChange={e=>setTrackingNumber(e.target.value)} placeholder="Order number (e.g. NM-XXXXX) or tracking number" className="flex-1 bg-noir border border-theme-border rounded-lg px-4 py-3 text-theme-text outline-none focus:border-theme-primary" autoComplete="off" />
           <button disabled={loading} className="btn-gold px-6 disabled:opacity-50"><HiSearch className="inline w-4 h-4 mr-2"/>{loading?'Checking…':'Track Order'}</button>
         </form>
 
@@ -69,11 +69,17 @@ export default function TrackOrder() {
             </div>
           </div>
 
-          <div className="luxury-card p-6 grid md:grid-cols-2 gap-5">
-            <div><p className="text-xs text-theme-muted uppercase tracking-wider">Delivery service</p><p className="mt-1 font-semibold">{result.tracking.carrier || 'Not specified'}</p></div>
-            <div><p className="text-xs text-theme-muted uppercase tracking-wider">Tracking number</p><p className="mt-1 font-mono font-semibold">{result.tracking.tracking_number}</p></div>
-            {result.tracking.tracking_url && <div className="md:col-span-2"><a href={result.tracking.tracking_url} target="_blank" rel="noreferrer" className="btn-outline-gold inline-flex items-center gap-2">Track with {result.tracking.carrier || 'delivery service'} <HiExternalLink/></a></div>}
-          </div>
+          {result.tracking.tracking_number ? (
+            <div className="luxury-card p-6 grid md:grid-cols-2 gap-5">
+              <div><p className="text-xs text-theme-muted uppercase tracking-wider">Delivery service</p><p className="mt-1 font-semibold">{result.tracking.carrier || 'Not specified'}</p></div>
+              <div><p className="text-xs text-theme-muted uppercase tracking-wider">Tracking number</p><p className="mt-1 font-mono font-semibold">{result.tracking.tracking_number}</p></div>
+              {result.tracking.tracking_url && <div className="md:col-span-2"><a href={result.tracking.tracking_url} target="_blank" rel="noreferrer" className="btn-outline-gold inline-flex items-center gap-2">Track with {result.tracking.carrier || 'delivery service'} <HiExternalLink/></a></div>}
+            </div>
+          ) : (
+            <div className="luxury-card p-6 text-sm text-theme-muted">
+              A tracking number and delivery service will appear here once your order ships.
+            </div>
+          )}
         </div>}
       </motion.div>
     </div>
