@@ -1,0 +1,6 @@
+[build]
+  base = "frontend"
+  command = "npm run build"
+  publish = "dist"
+
+# API and backend/upload URLs are configured with VITE_API_URL rather than a hardcoded deployment.

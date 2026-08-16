@@ -1,0 +1,490 @@
+# MASTER PROMPT — Remove All Hardcoded Theme Colors and Make the Entire Website Fully Dynamic
+
+You are a senior React, Tailwind CSS, Node.js, Express, PostgreSQL, and UI/UX architect.
+
+I already have a Theme Builder, Theme Store (Zustand), Theme API, and Theme Settings database.
+
+However, **the website is still using hardcoded Tailwind colors**, so changing the theme does not update the user website.
+
+Your job is to refactor the entire project so **every visual aspect is controlled by the Theme Builder**.
+
+This is a production website.
+
+Do NOT create a demo.
+
+Do NOT create duplicate components.
+
+Modify the existing codebase.
+
+---
+
+# GOAL
+
+Remove every hardcoded visual style from the website.
+
+After this refactor, changing one color in the Theme Builder should instantly update the entire website.
+
+No page should require editing React code to change colors.
+
+---
+
+# ANALYZE THE ENTIRE PROJECT
+
+Scan the complete project.
+
+Find every place that contains:
+
+Tailwind color classes
+
+Inline colors
+
+Hardcoded gradients
+
+Hardcoded shadows
+
+Hardcoded border colors
+
+Hardcoded backgrounds
+
+Hardcoded font families
+
+Hardcoded border radius
+
+Hardcoded button styles
+
+Hardcoded animations
+
+Hardcoded opacity
+
+Hardcoded overlays
+
+Hardcoded glass effects
+
+Replace every one of them.
+
+---
+
+# REMOVE HARDCODED TAILWIND COLORS
+
+Find and replace every occurrence of:
+
+bg-black
+
+bg-white
+
+bg-gray-*
+
+bg-neutral-*
+
+bg-zinc-*
+
+bg-slate-*
+
+text-white
+
+text-black
+
+text-gray-*
+
+text-neutral-*
+
+text-yellow-*
+
+text-red-*
+
+text-green-*
+
+text-blue-*
+
+text-purple-*
+
+border-gray-*
+
+border-neutral-*
+
+border-black
+
+border-white
+
+ring-*
+
+from-*
+
+to-*
+
+via-*
+
+Replace them with dynamic theme variables.
+
+---
+
+# CREATE A COMPLETE CSS VARIABLE SYSTEM
+
+Create variables for everything.
+
+Example:
+
+--primary
+
+--primary-hover
+
+--secondary
+
+--accent
+
+--background
+
+--surface
+
+--card
+
+--card-hover
+
+--text-primary
+
+--text-secondary
+
+--text-muted
+
+--border
+
+--border-hover
+
+--success
+
+--warning
+
+--danger
+
+--header-bg
+
+--footer-bg
+
+--sidebar-bg
+
+--button-bg
+
+--button-hover
+
+--button-text
+
+--input-bg
+
+--input-border
+
+--shadow
+
+--glass
+
+--radius-sm
+
+--radius-md
+
+--radius-lg
+
+--transition
+
+Do not limit the system.
+
+Everything should be theme-driven.
+
+---
+
+# CREATE GLOBAL THEME UTILITY CLASSES
+
+Generate reusable classes such as:
+
+.theme-bg
+
+.theme-surface
+
+.theme-card
+
+.theme-primary
+
+.theme-secondary
+
+.theme-accent
+
+.theme-text
+
+.theme-muted
+
+.theme-border
+
+.theme-input
+
+.theme-button
+
+.theme-button-outline
+
+.theme-button-glass
+
+.theme-header
+
+.theme-footer
+
+.theme-sidebar
+
+.theme-gradient
+
+.theme-shadow
+
+.theme-glass
+
+Every component should use these instead of hardcoded colors.
+
+---
+
+# UPDATE EVERY COMPONENT
+
+Refactor all pages including:
+
+Header
+
+Navbar
+
+Announcement Bar
+
+Hero
+
+Homepage
+
+Categories
+
+Collections
+
+Products
+
+Product Cards
+
+Product Details
+
+Search
+
+Filters
+
+Cart
+
+Wishlist
+
+Checkout
+
+Account
+
+Orders
+
+Reviews
+
+Contact
+
+Footer
+
+404 Page
+
+Loading Screen
+
+Modals
+
+Popups
+
+Forms
+
+Buttons
+
+Badges
+
+Pagination
+
+Admin Preview
+
+Everything should become dynamic.
+
+---
+
+# TYPOGRAPHY
+
+Remove hardcoded fonts.
+
+Everything should use:
+
+Heading Font
+
+Body Font
+
+Button Font
+
+Navigation Font
+
+loaded dynamically from the Theme Builder.
+
+---
+
+# BUTTON SYSTEM
+
+Make every button dynamic.
+
+Admin should control:
+
+Color
+
+Hover color
+
+Radius
+
+Padding
+
+Shadow
+
+Border
+
+Animation
+
+Glass
+
+Gradient
+
+Outline
+
+Filled
+
+Icon spacing
+
+---
+
+# LAYOUT SYSTEM
+
+Admin should control:
+
+Container width
+
+Section spacing
+
+Card spacing
+
+Grid gap
+
+Border radius
+
+Shadows
+
+Glass intensity
+
+Sidebar width
+
+Header height
+
+Footer spacing
+
+---
+
+# DARK MODE
+
+Everything should automatically support dark mode.
+
+No hardcoded dark colors.
+
+Use CSS variables.
+
+---
+
+# ANIMATIONS
+
+Move animation values into theme variables.
+
+Hover animations
+
+Page transitions
+
+Duration
+
+Easing
+
+Glass effects
+
+Scale
+
+Blur
+
+Everything should be configurable.
+
+---
+
+# LIVE UPDATES
+
+When the admin changes any setting:
+
+Immediately update CSS variables.
+
+Immediately update the preview.
+
+After saving:
+
+Update PostgreSQL.
+
+The user website should receive the new theme on refresh.
+
+---
+
+# STARTUP
+
+On application startup:
+
+Load the cached theme instantly.
+
+Fetch the latest theme.
+
+Apply CSS variables before rendering.
+
+Prevent Flash Of Unstyled Content (FOUC).
+
+Never render the default theme first.
+
+---
+
+# PERFORMANCE
+
+Do not create duplicate styles.
+
+Do not duplicate components.
+
+Reuse variables.
+
+Keep Tailwind only for:
+
+Spacing
+
+Flexbox
+
+Grid
+
+Sizing
+
+Positioning
+
+Responsive utilities
+
+Use CSS variables for all visual styling.
+
+---
+
+# CODE QUALITY
+
+Refactor the existing project.
+
+Do not rebuild the project from scratch.
+
+Preserve existing functionality.
+
+Generate clean, modular, scalable code.
+
+Comment important logic.
+
+At the end, provide a summary of:
+
+* Files modified
+* Components refactored
+* Hardcoded styles removed
+* New CSS variables created
+* Remaining places (if any) that still require manual changes
+* Any migration steps needed

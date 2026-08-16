@@ -1,0 +1,1552 @@
+# Complete Admin-Controlled Website Management System
+
+You are a senior full-stack developer. Upgrade my existing e-commerce website so that **every piece of content, design, branding, and configuration can be managed from the Admin Panel** without editing code.
+
+## General Rules
+
+* Do NOT break any existing functionality.
+* Keep the current database structure where possible.
+* Use the existing authentication system.
+* Reuse the existing Settings architecture instead of creating separate systems.
+* All changes must apply instantly after saving.
+* All settings must persist in the database.
+* Add validation for every field.
+* Add reset-to-default buttons.
+* Every upload should support JPG, PNG, WEBP and SVG where appropriate.
+* Images should automatically optimize and compress.
+* Support Cloudinary or local uploads.
+
+---
+
+# Dashboard
+
+Display:
+
+* Total Sales
+* Revenue
+* Today's Orders
+* Monthly Orders
+* Pending Orders
+* Completed Orders
+* Cancelled Orders
+* Customers
+* Products
+* Reviews
+* Inventory Alerts
+* Best Selling Products
+* Recent Orders
+* Recent Customers
+* Website Visitors
+* Conversion Rate
+* Sales Graph
+* Revenue Graph
+* Traffic Graph
+
+---
+
+# Homepage Editor
+
+Everything editable:
+
+Hero
+
+* Background Image
+* Mobile Background
+* Overlay
+* Heading
+* Subheading
+* Description
+* Primary Button
+* Secondary Button
+* Button Links
+* Hero Height
+* Hero Alignment
+* Hero Animation
+* Hero Font
+* Hero Colors
+* Hero Badges
+* Hero Video (optional)
+
+Collections
+
+* Collection Images
+* Collection Titles
+* Collection Description
+* Display Order
+* Enable/Disable
+
+Features Section
+
+* Icons
+* Title
+* Description
+
+Why Choose Us
+
+* Image
+* Heading
+* Paragraph
+* Features
+* Icons
+
+Testimonials
+
+* Enable/Disable
+* Customer Images
+* Customer Name
+* Rating
+* Review
+* Order
+
+Newsletter
+
+* Background
+* Heading
+* Description
+* Placeholder
+* Button Text
+
+Instagram Section
+
+* Images
+* Heading
+* Description
+* Links
+
+Footer Banner
+
+* Image
+* Heading
+* Button
+
+---
+
+# Product Management
+
+Editable:
+
+* Product Name
+* Slug
+* SKU
+* Barcode
+* Brand
+* Category
+* Subcategory
+* Collection
+* Tags
+* Weight
+* Volume
+* Size
+
+Admin manually creates sizes like:
+
+20ml
+30ml
+40ml
+50ml
+60ml
+100ml
+250ml
+500ml
+
+Each size has
+
+* Price
+* Sale Price
+* Stock
+* SKU
+* Weight
+
+Product Images
+
+* Unlimited Images
+* Drag & Drop
+* Reorder Images
+* Delete
+* Zoom
+* 360 Images (optional)
+* Videos
+
+Description
+
+* Rich Text Editor
+* HTML Editor
+* XML Editor
+* Specifications
+* Ingredients
+* Benefits
+* Directions
+* Warnings
+* FAQs
+
+SEO
+
+* Meta Title
+* Meta Description
+* Keywords
+* Open Graph
+* Twitter Card
+
+Inventory
+
+* Low Stock
+* Out of Stock
+* Hidden
+* Draft
+* Scheduled
+
+Badges
+
+* New
+* Sale
+* Bestseller
+* Organic
+* Limited
+* Custom Badge
+
+---
+
+# Categories
+
+Admin controls
+
+* Category Name
+* Icon
+* Banner
+* Description
+* SEO
+* Order
+* Parent Category
+* Unlimited Subcategories
+
+---
+
+# Branding
+
+Editable
+
+Logo
+
+* Light
+* Dark
+* Mobile
+* Favicon
+
+Site Name
+
+Tagline
+
+Copyright
+
+Company Name
+
+Brand Colors
+
+Accent Colors
+
+Border Radius
+
+Button Styles
+
+Card Styles
+
+Shadow Styles
+
+Spacing
+
+Container Width
+
+---
+
+# Typography
+
+Admin selects
+
+Heading Font
+
+Body Font
+
+Button Font
+
+Font Size
+
+Letter Spacing
+
+Line Height
+
+Font Weight
+
+Google Fonts Support
+
+---
+
+# Theme
+
+Editable
+
+Light Mode
+
+Dark Mode
+
+Auto Mode
+
+Gradient Colors
+
+Primary
+
+Secondary
+
+Success
+
+Warning
+
+Danger
+
+Background
+
+Cards
+
+Navbar
+
+Footer
+
+Buttons
+
+Links
+
+Forms
+
+Tables
+
+Animations
+
+---
+
+# Navigation
+
+Editable
+
+Header
+
+Sticky Header
+
+Announcement Bar
+
+Menus
+
+Dropdowns
+
+Mega Menu
+
+Icons
+
+Buttons
+
+Search
+
+Wishlist
+
+Cart
+
+Language Selector
+
+Currency Selector
+
+---
+
+# Footer
+
+Editable
+
+Columns
+
+Quick Links
+
+Customer Service
+
+Policies
+
+Payment Icons
+
+Newsletter
+
+Social Icons
+
+Copyright
+
+Background
+
+---
+
+# Social Media
+
+Admin edits
+
+Facebook
+
+Instagram
+
+TikTok
+
+YouTube
+
+Pinterest
+
+LinkedIn
+
+Threads
+
+WhatsApp
+
+Snapchat
+
+Telegram
+
+Email
+
+Phone
+
+Address
+
+Google Maps
+
+---
+
+# Contact Page
+
+Editable
+
+Banner
+
+Title
+
+Description
+
+Form Fields
+
+Map
+
+Business Hours
+
+Departments
+
+Emails
+
+Phone Numbers
+
+FAQ
+
+---
+
+# About Page
+
+Everything editable
+
+Images
+
+Founder Story
+
+Mission
+
+Vision
+
+Timeline
+
+Statistics
+
+Achievements
+
+Certificates
+
+Gallery
+
+Videos
+
+---
+
+# Policies
+
+Editable pages
+
+Privacy Policy
+
+Refund Policy
+
+Shipping Policy
+
+Terms & Conditions
+
+Cookies
+
+Returns
+
+---
+
+# Reviews
+
+Admin can
+
+Approve
+
+Reject
+
+Reply
+
+Feature Reviews
+
+Pin Reviews
+
+Upload Images
+
+Delete
+
+---
+
+# Coupons
+
+Create
+
+Percentage
+
+Fixed Amount
+
+Free Shipping
+
+Usage Limits
+
+Expiry
+
+Minimum Purchase
+
+Maximum Discount
+
+---
+
+# Orders
+
+Manage
+
+Status
+
+Invoices
+
+Packing Slips
+
+Tracking
+
+Shipping
+
+Refunds
+
+Returns
+
+Notes
+
+---
+
+# Customers
+
+Manage
+
+Addresses
+
+Orders
+
+Wishlist
+
+Reward Points
+
+Notes
+
+---
+
+# Inventory
+
+Warehouse
+
+Suppliers
+
+Purchase Orders
+
+Stock History
+
+Low Stock Alerts
+
+Automatic Notifications
+
+---
+
+# SEO
+
+Editable
+
+robots.txt
+
+sitemap.xml
+
+Canonical URLs
+
+Structured Data
+
+Meta Tags
+
+Schema
+
+Open Graph
+
+Twitter Cards
+
+Analytics IDs
+
+Search Console
+
+Facebook Pixel
+
+Google Tag Manager
+
+---
+
+# Performance
+
+Enable/Disable
+
+Image Lazy Loading
+
+Preloading
+
+Caching
+
+Compression
+
+Minification
+
+WebP
+
+Critical CSS
+
+Skeleton Loaders
+
+Infinite Scroll
+
+---
+
+# Security
+
+Google reCAPTCHA
+
+Cloudflare Turnstile
+
+Rate Limiting
+
+Admin Logs
+
+Failed Login Logs
+
+Two Factor Authentication
+
+---
+
+# Email Settings
+
+SMTP
+
+Sender Name
+
+Templates
+
+Order Emails
+
+Newsletter Emails
+
+Contact Emails
+
+Password Reset Emails
+
+---
+
+# Payment Settings
+
+Enable
+
+Stripe
+
+PayPal
+
+Cash on Delivery
+
+Bank Transfer
+
+JazzCash
+
+EasyPaisa
+
+Custom Payment Gateways
+
+---
+
+# Shipping
+
+Shipping Zones
+
+Flat Rate
+
+Free Shipping
+
+Weight Based
+
+Local Pickup
+
+---
+
+# Advanced Settings
+
+Maintenance Mode
+
+Backup
+
+Restore
+
+Import Products
+
+Export Products
+
+CSV
+
+Excel
+
+XML
+
+JSON
+
+Database Backup
+
+Image Cleanup
+
+Cache Clear
+
+System Logs
+
+---
+
+# Media Library
+
+Central library
+
+Folders
+
+Search
+
+Tags
+
+Replace Images
+
+Bulk Delete
+
+Bulk Upload
+
+Compression
+
+Image Optimization
+
+Unused Media Detection
+
+---
+
+# Live Preview
+
+Every change should instantly preview before saving.
+
+---
+
+# Final Requirements
+
+* Fully responsive.
+* Beautiful modern admin interface.
+* Fast loading.
+* Search for every setting.
+* Tabs and categories.
+* Permission system for multiple admins.
+* Undo changes.
+* Save drafts.
+* Auto-save.
+* Version history.
+* Activity logs.
+* No existing functionality should break.
+* Existing data must migrate automatically.
+* Code should be clean, modular, documented, and production-ready.
+# Complete Admin-Controlled Website Management System
+
+You are a senior full-stack developer. Upgrade my existing e-commerce website so that **every piece of content, design, branding, and configuration can be managed from the Admin Panel** without editing code.
+
+## General Rules
+
+* Do NOT break any existing functionality.
+* Keep the current database structure where possible.
+* Use the existing authentication system.
+* Reuse the existing Settings architecture instead of creating separate systems.
+* All changes must apply instantly after saving.
+* All settings must persist in the database.
+* Add validation for every field.
+* Add reset-to-default buttons.
+* Every upload should support JPG, PNG, WEBP and SVG where appropriate.
+* Images should automatically optimize and compress.
+* Support Cloudinary or local uploads.
+
+---
+
+# Dashboard
+
+Display:
+
+* Total Sales
+* Revenue
+* Today's Orders
+* Monthly Orders
+* Pending Orders
+* Completed Orders
+* Cancelled Orders
+* Customers
+* Products
+* Reviews
+* Inventory Alerts
+* Best Selling Products
+* Recent Orders
+* Recent Customers
+* Website Visitors
+* Conversion Rate
+* Sales Graph
+* Revenue Graph
+* Traffic Graph
+
+---
+
+# Homepage Editor
+
+Everything editable:
+
+Hero
+
+* Background Image
+* Mobile Background
+* Overlay
+* Heading
+* Subheading
+* Description
+* Primary Button
+* Secondary Button
+* Button Links
+* Hero Height
+* Hero Alignment
+* Hero Animation
+* Hero Font
+* Hero Colors
+* Hero Badges
+* Hero Video (optional)
+
+Collections
+
+* Collection Images
+* Collection Titles
+* Collection Description
+* Display Order
+* Enable/Disable
+
+Features Section
+
+* Icons
+* Title
+* Description
+
+Why Choose Us
+
+* Image
+* Heading
+* Paragraph
+* Features
+* Icons
+
+Testimonials
+
+* Enable/Disable
+* Customer Images
+* Customer Name
+* Rating
+* Review
+* Order
+
+Newsletter
+
+* Background
+* Heading
+* Description
+* Placeholder
+* Button Text
+
+Instagram Section
+
+* Images
+* Heading
+* Description
+* Links
+
+Footer Banner
+
+* Image
+* Heading
+* Button
+
+---
+
+# Product Management
+
+Editable:
+
+* Product Name
+* Slug
+* SKU
+* Barcode
+* Brand
+* Category
+* Subcategory
+* Collection
+* Tags
+* Weight
+* Volume
+* Size
+
+Admin manually creates sizes like:
+
+20ml
+30ml
+40ml
+50ml
+60ml
+100ml
+250ml
+500ml
+
+Each size has
+
+* Price
+* Sale Price
+* Stock
+* SKU
+* Weight
+
+Product Images
+
+* Unlimited Images
+* Drag & Drop
+* Reorder Images
+* Delete
+* Zoom
+* 360 Images (optional)
+* Videos
+
+Description
+
+* Rich Text Editor
+* HTML Editor
+* XML Editor
+* Specifications
+* Ingredients
+* Benefits
+* Directions
+* Warnings
+* FAQs
+
+SEO
+
+* Meta Title
+* Meta Description
+* Keywords
+* Open Graph
+* Twitter Card
+
+Inventory
+
+* Low Stock
+* Out of Stock
+* Hidden
+* Draft
+* Scheduled
+
+Badges
+
+* New
+* Sale
+* Bestseller
+* Organic
+* Limited
+* Custom Badge
+
+---
+
+# Categories
+
+Admin controls
+
+* Category Name
+* Icon
+* Banner
+* Description
+* SEO
+* Order
+* Parent Category
+* Unlimited Subcategories
+
+---
+
+# Branding
+
+Editable
+
+Logo
+
+* Light
+* Dark
+* Mobile
+* Favicon
+
+Site Name
+
+Tagline
+
+Copyright
+
+Company Name
+
+Brand Colors
+
+Accent Colors
+
+Border Radius
+
+Button Styles
+
+Card Styles
+
+Shadow Styles
+
+Spacing
+
+Container Width
+
+---
+
+# Typography
+
+Admin selects
+
+Heading Font
+
+Body Font
+
+Button Font
+
+Font Size
+
+Letter Spacing
+
+Line Height
+
+Font Weight
+
+Google Fonts Support
+
+---
+
+# Theme
+
+Editable
+
+Light Mode
+
+Dark Mode
+
+Auto Mode
+
+Gradient Colors
+
+Primary
+
+Secondary
+
+Success
+
+Warning
+
+Danger
+
+Background
+
+Cards
+
+Navbar
+
+Footer
+
+Buttons
+
+Links
+
+Forms
+
+Tables
+
+Animations
+
+---
+
+# Navigation
+
+Editable
+
+Header
+
+Sticky Header
+
+Announcement Bar
+
+Menus
+
+Dropdowns
+
+Mega Menu
+
+Icons
+
+Buttons
+
+Search
+
+Wishlist
+
+Cart
+
+Language Selector
+
+Currency Selector
+
+---
+
+# Footer
+
+Editable
+
+Columns
+
+Quick Links
+
+Customer Service
+
+Policies
+
+Payment Icons
+
+Newsletter
+
+Social Icons
+
+Copyright
+
+Background
+
+---
+
+# Social Media
+
+Admin edits
+
+Facebook
+
+Instagram
+
+TikTok
+
+YouTube
+
+Pinterest
+
+LinkedIn
+
+Threads
+
+WhatsApp
+
+Snapchat
+
+Telegram
+
+Email
+
+Phone
+
+Address
+
+Google Maps
+
+---
+
+# Contact Page
+
+Editable
+
+Banner
+
+Title
+
+Description
+
+Form Fields
+
+Map
+
+Business Hours
+
+Departments
+
+Emails
+
+Phone Numbers
+
+FAQ
+
+---
+
+# About Page
+
+Everything editable
+
+Images
+
+Founder Story
+
+Mission
+
+Vision
+
+Timeline
+
+Statistics
+
+Achievements
+
+Certificates
+
+Gallery
+
+Videos
+
+---
+
+# Policies
+
+Editable pages
+
+Privacy Policy
+
+Refund Policy
+
+Shipping Policy
+
+Terms & Conditions
+
+Cookies
+
+Returns
+
+---
+
+# Reviews
+
+Admin can
+
+Approve
+
+Reject
+
+Reply
+
+Feature Reviews
+
+Pin Reviews
+
+Upload Images
+
+Delete
+
+---
+
+# Coupons
+
+Create
+
+Percentage
+
+Fixed Amount
+
+Free Shipping
+
+Usage Limits
+
+Expiry
+
+Minimum Purchase
+
+Maximum Discount
+
+---
+
+# Orders
+
+Manage
+
+Status
+
+Invoices
+
+Packing Slips
+
+Tracking
+
+Shipping
+
+Refunds
+
+Returns
+
+Notes
+
+---
+
+# Customers
+
+Manage
+
+Addresses
+
+Orders
+
+Wishlist
+
+Reward Points
+
+Notes
+
+---
+
+# Inventory
+
+Warehouse
+
+Suppliers
+
+Purchase Orders
+
+Stock History
+
+Low Stock Alerts
+
+Automatic Notifications
+
+---
+
+# SEO
+
+Editable
+
+robots.txt
+
+sitemap.xml
+
+Canonical URLs
+
+Structured Data
+
+Meta Tags
+
+Schema
+
+Open Graph
+
+Twitter Cards
+
+Analytics IDs
+
+Search Console
+
+Facebook Pixel
+
+Google Tag Manager
+
+---
+
+# Performance
+
+Enable/Disable
+
+Image Lazy Loading
+
+Preloading
+
+Caching
+
+Compression
+
+Minification
+
+WebP
+
+Critical CSS
+
+Skeleton Loaders
+
+Infinite Scroll
+
+---
+
+# Security
+
+Google reCAPTCHA
+
+Cloudflare Turnstile
+
+Rate Limiting
+
+Admin Logs
+
+Failed Login Logs
+
+Two Factor Authentication
+
+---
+
+# Email Settings
+
+SMTP
+
+Sender Name
+
+Templates
+
+Order Emails
+
+Newsletter Emails
+
+Contact Emails
+
+Password Reset Emails
+
+---
+
+# Payment Settings
+
+Enable
+
+Stripe
+
+PayPal
+
+Cash on Delivery
+
+Bank Transfer
+
+JazzCash
+
+EasyPaisa
+
+Custom Payment Gateways
+
+---
+
+# Shipping
+
+Shipping Zones
+
+Flat Rate
+
+Free Shipping
+
+Weight Based
+
+Local Pickup
+
+---
+
+# Advanced Settings
+
+Maintenance Mode
+
+Backup
+
+Restore
+
+Import Products
+
+Export Products
+
+CSV
+
+Excel
+
+XML
+
+JSON
+
+Database Backup
+
+Image Cleanup
+
+Cache Clear
+
+System Logs
+
+---
+
+# Media Library
+
+Central library
+
+Folders
+
+Search
+
+Tags
+
+Replace Images
+
+Bulk Delete
+
+Bulk Upload
+
+Compression
+
+Image Optimization
+
+Unused Media Detection
+
+---
+
+# Live Preview
+
+Every change should instantly preview before saving.
+
+---
+
+# Final Requirements
+
+* Fully responsive.
+* Beautiful modern admin interface.
+* Fast loading.
+* Search for every setting.
+* Tabs and categories.
+* Permission system for multiple admins.
+* Undo changes.
+* Save drafts.
+* Auto-save.
+* Version history.
+* Activity logs.
+* No existing functionality should break.
+* Existing data must migrate automatically.
+* Code should be clean, modular, documented, and production-ready.
