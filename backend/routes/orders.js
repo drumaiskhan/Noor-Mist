@@ -3,6 +3,7 @@ const { query, getClient } = require('../config/database');
 const crypto = require('crypto');
 const { authenticate, requireAdmin, optionalAuth } = require('../middleware/auth');
 const { sendOrderReceivedEmail, sendOrderConfirmation, sendOrderStatusUpdateEmail } = require('../services/email');
+const { notifyOrderEvent } = require('../services/whatsappService');
 
 const router = express.Router();
 
@@ -225,6 +226,11 @@ router.post('/', optionalAuth, async (req, res) => {
     // to only fire `if (req.user)`, silently skipping every guest order).
     sendOrderReceivedEmail(order, rawConfirmationToken, orderItems).catch(console.error);
 
+    // WhatsApp order confirmation (Meta Cloud API) — fire-and-forget, exactly
+    // like the email above. Never allowed to affect this response: a
+    // WhatsApp failure is logged for the admin, the order still succeeds.
+    notifyOrderEvent(order, 'order_created').catch((e) => console.error('WhatsApp notify (order_created):', e.message));
+
     res.status(201).json({ order, message: 'Order placed successfully' });
   } catch (error) {
     await client.query('ROLLBACK').catch(() => {});
@@ -292,6 +298,7 @@ router.post('/confirm', async (req, res) => {
     await client.query('COMMIT');
 
     sendOrderConfirmation(confirmedOrder).catch(console.error);
+    notifyOrderEvent(confirmedOrder, 'order_confirmed').catch((e) => console.error('WhatsApp notify (order_confirmed):', e.message));
     res.json({ order: confirmedOrder, message: 'Order confirmed successfully.' });
   } catch (error) {
     await client.query('ROLLBACK').catch(() => {});
@@ -523,6 +530,9 @@ router.put('/:id/status', requireAdmin, async (req, res) => {
     const updatedOrder = result.rows[0];
     await query(`INSERT INTO order_status_history (order_id,status,note,tracking_number,tracking_carrier,tracking_url,changed_by) VALUES ($1,$2,$3,$4,$5,$6,$7)`, [updatedOrder.id,status,note||null,updatedOrder.tracking_number||null,updatedOrder.tracking_carrier||null,updatedOrder.tracking_url||null,req.user.id]).catch(e=>console.error('status history:',e.message));
     if (previousOrder.status !== status) sendOrderStatusUpdateEmail(updatedOrder, previousOrder.status).catch(console.error);
+    if (previousOrder.status !== 'confirmed' && status === 'confirmed') {
+      notifyOrderEvent(updatedOrder, 'order_confirmed').catch((e) => console.error('WhatsApp notify (order_confirmed):', e.message));
+    }
 
 
 

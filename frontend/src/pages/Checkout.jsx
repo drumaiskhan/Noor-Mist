@@ -11,8 +11,8 @@ import toast from 'react-hot-toast';
 import { useQuery } from '@tanstack/react-query';
 import useCartStore from '../store/cartStore';
 import useAuthStore from '../store/authStore';
-import { orderAPI, paymentAPI, settingsAPI } from '../services/api';
-import { formatPrice } from '../utils/helpers';
+import { orderAPI, paymentAPI, settingsAPI, whatsappAPI } from '../services/api';
+import { formatPrice, isValidWhatsAppPhone } from '../utils/helpers';
 import { resolveMediaUrl } from '../utils/cloudinary';
 
 const METHOD_ICONS = {
@@ -92,6 +92,20 @@ export default function Checkout() {
     staleTime: 5 * 60 * 1000,
   });
 
+  // Whether automatic WhatsApp order confirmation is currently active — if
+  // so, the phone field must validate as a real WhatsApp-reachable number
+  // before the order can be submitted, per the admin's WhatsApp Notifications
+  // settings. Fails open (treated as not required) if the check errors.
+  const { data: whatsappStatus = { enabled: false } } = useQuery({
+    queryKey: ['whatsappPublicStatus'],
+    queryFn: async () => {
+      const { data } = await whatsappAPI.getPublicStatus();
+      return data;
+    },
+    staleTime: 5 * 60 * 1000,
+    retry: false,
+  });
+
   const shippingRate = settings.shipping_flat_rate !== undefined ? Number(settings.shipping_flat_rate) : (settings.shipping_rate !== undefined ? Number(settings.shipping_rate) : 200);
   const freeShippingThreshold = settings.shipping_free_threshold !== undefined
     ? Number(settings.shipping_free_threshold) : (settings.free_shipping_threshold !== undefined ? Number(settings.free_shipping_threshold) : 5000);
@@ -156,6 +170,10 @@ export default function Checkout() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (items.length === 0) { toast.error('Your cart is empty'); return; }
+    if (whatsappStatus.enabled && !isValidWhatsAppPhone(form.phone)) {
+      toast.error('Please enter a valid WhatsApp number (e.g. 03001234567) — we use it to send your order confirmation.');
+      return;
+    }
     setIsSubmitting(true);
     try {
       const orderData = {
@@ -448,7 +466,17 @@ export default function Checkout() {
                 <CheckoutInput label="First Name" name="firstName" value={form.firstName} onChange={handleChange} required />
                 <CheckoutInput label="Last Name" name="lastName" value={form.lastName} onChange={handleChange} />
                 <CheckoutInput label="Email" name="email" type="email" value={form.email} onChange={handleChange} required />
-                <CheckoutInput label="Phone" name="phone" type="tel" value={form.phone} onChange={handleChange} required />
+                <div>
+                  <CheckoutInput
+                    label={whatsappStatus.enabled ? 'WhatsApp / Phone Number' : 'Phone'}
+                    name="phone" type="tel" value={form.phone} onChange={handleChange} required
+                  />
+                  {whatsappStatus.enabled && (
+                    <p className="text-xs text-theme-muted mt-1.5">
+                      We'll use this number to send your order confirmation and important order updates through WhatsApp.
+                    </p>
+                  )}
+                </div>
                 <div className="sm:col-span-2">
                   <CheckoutInput label="Street Address" name="address" value={form.address} onChange={handleChange} required />
                 </div>

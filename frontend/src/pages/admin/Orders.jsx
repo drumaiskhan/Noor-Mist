@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { orderAPI, paymentAPI } from '../../services/api';
+import { orderAPI, paymentAPI, whatsappAPI } from '../../services/api';
 import { 
   HiSearch, HiTruck, HiCheck, HiX, HiClock,
   HiClipboardList, HiCurrencyDollar, HiUser, HiLocationMarker,
   HiPhone, HiMail, HiCube, HiArrowLeft, HiTrash, HiPrinter, HiDocumentText,
-  HiArchive, HiCheckCircle, HiBan, HiSave
+  HiArchive, HiCheckCircle, HiBan, HiSave, HiRefresh, HiPaperAirplane
 } from 'react-icons/hi';
 import { formatPrice, formatDateTime, formatDate } from '../../utils/helpers';
 import { resolveMediaUrl } from '../../utils/cloudinary';
@@ -173,6 +173,108 @@ const collectionTypes = [
 // labels — instead of a flat, unordered row of status buttons that didn't
 // visually match what the storefront showed.
 const TRACKER_STEPS = ORDER_PROGRESS_STEPS;
+
+// WhatsApp Notification section for the Order Details drawer (spec section
+// 21). Self-contained: fetches its own status so the parent order query
+// doesn't need to carry WhatsApp fields.
+function WhatsAppNotificationSection({ orderId }) {
+  const queryClient = useQueryClient();
+  const [confirmSend, setConfirmSend] = useState(false);
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['whatsappOrderStatus', orderId],
+    queryFn: async () => { const { data } = await whatsappAPI.getOrderStatus(orderId); return data.logs || []; },
+    enabled: !!orderId,
+  });
+
+  const sendMutation = useMutation({
+    mutationFn: () => whatsappAPI.sendOrderMessage(orderId),
+    onSuccess: () => {
+      toast.success('WhatsApp notification sent');
+      queryClient.invalidateQueries({ queryKey: ['whatsappOrderStatus', orderId] });
+      setConfirmSend(false);
+    },
+    onError: (err) => { toast.error(err.response?.data?.error || 'Failed to send WhatsApp notification'); setConfirmSend(false); },
+  });
+
+  const retryMutation = useMutation({
+    mutationFn: (id) => whatsappAPI.retryMessage(id),
+    onSuccess: () => {
+      toast.success('Message resent successfully');
+      queryClient.invalidateQueries({ queryKey: ['whatsappOrderStatus', orderId] });
+    },
+    onError: (err) => toast.error(err.response?.data?.error || 'Retry failed'),
+  });
+
+  const latest = data?.[0];
+
+  return (
+    <div>
+      <h3 className="text-sm font-montserrat text-gray-400 uppercase tracking-wider mb-3">WhatsApp Notification</h3>
+      <div className="luxury-card p-4 space-y-3">
+        {isLoading ? (
+          <p className="text-xs text-gray-500">Loading…</p>
+        ) : !latest ? (
+          <p className="text-sm text-gray-400">No WhatsApp notification has been sent for this order yet.</p>
+        ) : latest.status === 'sent' ? (
+          <div className="flex items-center gap-2 text-sm text-green-400">
+            <HiCheck className="w-4 h-4" />
+            <span>Sent — {formatDateTime(latest.sent_at || latest.created_at)}</span>
+          </div>
+        ) : latest.status === 'skipped' ? (
+          <div className="flex items-center gap-2 text-sm text-gray-400">
+            <HiClock className="w-4 h-4" />
+            <span>Skipped — {latest.error_message}</span>
+          </div>
+        ) : (
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 text-sm text-red-400">
+              <HiX className="w-4 h-4" />
+              <span>Failed</span>
+            </div>
+            {latest.error_message && <p className="text-xs text-gray-500">Reason: {latest.error_message}</p>}
+          </div>
+        )}
+
+        <div className="flex gap-2 pt-1">
+          {latest?.status === 'failed' && (
+            <button onClick={() => retryMutation.mutate(latest.id)} disabled={retryMutation.isPending}
+              className="inline-flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg bg-gold/10 text-gold border border-gold/30 hover:bg-gold/20 transition-colors disabled:opacity-50">
+              <HiRefresh className={`w-3.5 h-3.5 ${retryMutation.isPending ? 'animate-spin' : ''}`} />
+              Retry
+            </button>
+          )}
+          {latest?.status === 'sent' && !confirmSend && (
+            <button onClick={() => setConfirmSend(true)}
+              className="inline-flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg border border-gray-700 text-gray-300 hover:border-gray-600 transition-colors">
+              <HiPaperAirplane className="w-3.5 h-3.5" />
+              Send Again
+            </button>
+          )}
+          {latest?.status !== 'sent' && !latest && (
+            <button onClick={() => sendMutation.mutate()} disabled={sendMutation.isPending}
+              className="inline-flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg bg-gold/10 text-gold border border-gold/30 hover:bg-gold/20 transition-colors disabled:opacity-50">
+              <HiPaperAirplane className="w-3.5 h-3.5" />
+              Send Now
+            </button>
+          )}
+          {confirmSend && (
+            <div className="flex items-center gap-2 text-xs">
+              <span className="text-gray-400">Send another confirmation to this customer?</span>
+              <button onClick={() => sendMutation.mutate()} disabled={sendMutation.isPending}
+                className="px-2.5 py-1 rounded-md bg-gold text-black font-semibold">
+                {sendMutation.isPending ? 'Sending…' : 'Confirm'}
+              </button>
+              <button onClick={() => setConfirmSend(false)} className="px-2.5 py-1 rounded-md border border-gray-700 text-gray-400">
+                Cancel
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function Orders() {
   const queryClient = useQueryClient();
@@ -802,6 +904,8 @@ export default function Orders() {
                     )}
                   </div>
                 </div>
+
+                <WhatsAppNotificationSection orderId={selectedOrder.id} />
 
                 {/* Shipping Address */}
                 {selectedOrder.shipping_address && (

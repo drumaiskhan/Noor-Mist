@@ -8,6 +8,7 @@ const fs = require('fs');
 const crypto = require('crypto');
 const { v4: uuidv4 } = require('uuid');
 const { sendOrderStatusUpdateEmail } = require('../services/email');
+const { notifyOrderEvent } = require('../services/whatsappService');
 
 // ── Cloudinary / upload helpers ────────────────────────────────────────────
 const cloudinaryEnabled =
@@ -281,7 +282,10 @@ router.put('/proofs/:id/verify', requireAdmin, async (req, res) => {
         [proof.order_id, JSON.stringify({ order_id: proof.order_id, user_id: proof.user_id })]
       ).catch(() => {});
       const approvedOrder = await query('SELECT * FROM orders WHERE id=$1', [proof.order_id]);
-      if (approvedOrder.rows[0]) sendOrderStatusUpdateEmail(approvedOrder.rows[0], 'pending').catch(console.error);
+      if (approvedOrder.rows[0]) {
+        sendOrderStatusUpdateEmail(approvedOrder.rows[0], 'pending').catch(console.error);
+        notifyOrderEvent(approvedOrder.rows[0], 'order_confirmed').catch((e) => console.error('WhatsApp notify (payment approved):', e.message));
+      }
     } else if (status === 'rejected') {
       await query(
         `UPDATE orders SET status='pending_payment', updated_at=NOW() WHERE id=$1`,
@@ -755,6 +759,7 @@ router.get('/card/result', async (req, res) => {
         [order.id]
       ).catch(() => {});
       sendOrderStatusUpdateEmail(updated, 'pending').catch(console.error);
+      notifyOrderEvent(updated, 'order_confirmed').catch((e) => console.error('WhatsApp notify (card result):', e.message));
       return res.json({ paid: true, order: updated });
     }
 
@@ -797,6 +802,7 @@ router.post('/card/webhook', async (req, res) => {
           [order.id]
         ).catch(() => {});
         sendOrderStatusUpdateEmail(rows[0], 'pending').catch(console.error);
+        notifyOrderEvent(rows[0], 'order_confirmed').catch((e) => console.error('WhatsApp notify (card webhook):', e.message));
       }
     }
 

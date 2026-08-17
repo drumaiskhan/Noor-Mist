@@ -85,6 +85,7 @@ const SiteText = lazy(() => import('./pages/admin/SiteText'));
 const Announcements = lazy(() => import('./pages/admin/Announcements'));
 
 const EmailSettings = lazy(() => import('./pages/admin/EmailSettings'));
+const WhatsAppSettings = lazy(() => import('./pages/admin/WhatsAppSettings'));
 
 const PaymentSettings = lazy(() => import('./pages/admin/PaymentSettings'));
 
@@ -341,6 +342,8 @@ element={<Announcements />}
 <Route path="analytics" element={<Analytics />} />
 
 <Route path="email-settings" element={<EmailSettings />} />
+
+<Route path="whatsapp-settings" element={<WhatsAppSettings />} />
 
 {/* Bank Settings and the old standalone Payment & Shipping page were both
     folded into Payment Settings — see that page's Bank Accounts, Digital

@@ -261,12 +261,24 @@ export const emailAPI = {
   getSettings: () => api.get('/email/settings'),
   updateSettings: (data) => api.put('/email/settings', data),
   getProviders: () => api.get('/email/providers'),
+  // Save/remove ONE provider's credentials independently — this is what
+  // lets Brevo, SendGrid, a Custom API, and SMTP all be configured at the
+  // same time for failover, instead of one shared credential slot.
+  saveProviderCredentials: (key, data) => api.put(`/email/providers/${key}`, data),
+  deleteProviderCredentials: (key) => api.delete(`/email/providers/${key}`),
+  // Ordered list of provider keys to try, e.g. ['brevo','custom','smtp'] —
+  // sending tries each in order until one succeeds.
+  savePriority: (priority) => api.put('/email/priority', { priority }),
+  // Tests exactly one provider's credentials, bypassing the failover chain.
+  testProvider: (key, data) => api.post(`/email/providers/${key}/test`, data, { timeout: 20000 }),
   // Longer timeout than the client default — SMTP handshakes (especially a
   // failing one) can take longer than typical API calls, and we want the
   // backend's own connection timeout to be what surfaces the real error,
-  // not an axios abort that hides it.
+  // not an axios abort that hides it. `data` may include a `settings`
+  // override so currently-typed-but-unsaved values are what gets tested,
+  // not whatever is already saved in the database.
   test: (data) => api.post('/email/test', data, { timeout: 20000 }),
-  testConnection: () => api.post('/email/test-connection', {}, { timeout: 15000 }),
+  testConnection: (data) => api.post('/email/test-connection', data, { timeout: 15000 }),
   getLogs: (params) => api.get('/email/logs', { params }),
   getBroadcastTemplates: () => api.get('/email/broadcast-templates'),
   saveBroadcastTemplate: (data) => api.post('/email/broadcast-templates', data),
@@ -286,6 +298,24 @@ export const emailTemplatesAPI = {
   getAll: () => api.get('/email-templates'),
   update: (key, data) => api.put(`/email-templates/${key}`, data),
   reset: (key) => api.post(`/email-templates/${key}/reset`),
+};
+
+// WhatsApp API
+export const whatsappAPI = {
+  getSettings: () => api.get('/admin/whatsapp/settings'),
+  updateSettings: (data) => api.put('/admin/whatsapp/settings', data),
+  resetTemplate: () => api.post('/admin/whatsapp/settings/reset'),
+  preview: (message_template) => api.post('/admin/whatsapp/preview', { message_template }),
+  // Longer timeout — same reasoning as emailAPI.test: a real API round trip
+  // to Meta can take longer than the client's default timeout.
+  sendTest: (phone) => api.post('/admin/whatsapp/test', { phone }, { timeout: 20000 }),
+  getLogs: (params) => api.get('/admin/whatsapp/logs', { params }),
+  retryMessage: (id) => api.post(`/admin/whatsapp/messages/${id}/retry`, {}, { timeout: 20000 }),
+  sendOrderMessage: (orderId) => api.post(`/admin/whatsapp/orders/${orderId}/send`, {}, { timeout: 20000 }),
+  getOrderStatus: (orderId) => api.get(`/admin/whatsapp/orders/${orderId}`),
+  // Public — no auth required, used by Checkout to decide whether the
+  // phone field must validate strictly.
+  getPublicStatus: () => api.get('/whatsapp/status'),
 };
 
 // Pages API

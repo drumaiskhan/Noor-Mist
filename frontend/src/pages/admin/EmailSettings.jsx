@@ -226,11 +226,147 @@ export default function EmailSettings() {
   const updateDraft = (key, field, value) =>
     setDrafts((d) => ({ ...d, [key]: { ...d[key], [field]: value } }));
 
-  const handleTestConnection = async () => { setConnectionTesting(true); try { const { data } = await emailAPI.testConnection(); toast.success(data.message || 'Connection verified'); } catch (err) { toast.error(err.response?.data?.error || 'Connection test failed'); } finally { setConnectionTesting(false); } };
+  const handleTestConnection = async () => {
+    setConnectionTesting(true);
+    try {
+      const { data } = await emailAPI.testConnection({ settings: form, provider: form.email_provider });
+      toast.success(data.message || 'Connection verified');
+    } catch (err) { toast.error(err.response?.data?.error || 'Connection test failed'); }
+    finally { setConnectionTesting(false); }
+  };
 
-  const handleTest = async () => { if (!testEmail.trim()) return toast.error('Enter a recipient email'); setTesting(true); try { const { data } = await emailAPI.test({ to: testEmail.trim() }); toast.success(data.message || 'Test email sent'); queryClient.invalidateQueries({ queryKey: ['emailSettings'] }); queryClient.invalidateQueries({ queryKey: ['emailLogs'] }); } catch (err) { toast.error(err.response?.data?.error || 'Failed to send test email'); } finally { setTesting(false); } };
+  // Sends the CURRENT form values as an inline override — this is the fix
+  // for "the test button doesn't work": it used to always test whatever
+  // was last saved to the database, silently ignoring anything typed but
+  // not yet saved. Now it tests exactly what's on screen, and — if a
+  // failover order is configured — the whole chain, reporting which
+  // provider(s) were tried.
+  const handleTest = async () => {
+    if (!testEmail.trim()) return toast.error('Enter a recipient email');
+    setTesting(true);
+    try {
+      const { data } = await emailAPI.test({ to: testEmail.trim(), settings: form });
+      toast.success(data.message || 'Test email sent');
+      queryClient.invalidateQueries({ queryKey: ['emailSettings'] });
+      queryClient.invalidateQueries({ queryKey: ['emailLogs'] });
+    } catch (err) {
+      const data = err.response?.data;
+      if (data?.attempts?.length > 1) {
+        toast.error(data.attempts.map((a) => `${a.provider}: ${a.status === 'sent' ? 'sent' : a.error}`).join('\n'), { duration: 8000 });
+      } else {
+        toast.error(data?.error || 'Failed to send test email');
+      }
+    } finally { setTesting(false); }
+  };
 
   const saveBroadcastTemplate = async () => { if (!broadcastForm.key || !broadcastForm.label) return toast.error('Template key and label are required'); try { await emailAPI.saveBroadcastTemplate(broadcastForm); toast.success('Broadcast template saved'); setEditingBroadcast(null); queryClient.invalidateQueries({ queryKey: ['emailBroadcastTemplates'] }); } catch (err) { toast.error(err.response?.data?.error || 'Failed to save broadcast template'); } };
+
+  // Saves the currently-displayed provider card. Provider-specific
+  // credentials (API key, SMTP host, Custom API template, etc.) go through
+  // the per-provider endpoint so each provider's credentials are stored
+  // independently — that's what makes it possible to have several
+  // providers configured at once for failover. Global fields (from name/
+  // address, reply-to, site URL) apply no matter which provider ends up
+  // sending, so those still go through the shared settings endpoint.
+  const handleSaveProviderCard = async () => {
+    const key = form.email_provider || 'brevo';
+    try {
+      if (key === 'smtp') {
+        await emailAPI.saveProviderCredentials('smtp', {
+          smtp_host: form.smtp_host, smtp_port: form.smtp_port, smtp_user: form.smtp_user,
+          smtp_password: form.smtp_password, smtp_secure: form.smtp_secure,
+        });
+      } else {
+        await emailAPI.saveProviderCredentials(key, {
+          api_key: form.email_api_key, domain: form.email_api_domain,
+          api_url: form.api_url, api_method: form.api_method || 'POST',
+          api_headers: form.api_headers, api_body_template: form.api_body_template,
+        });
+      }
+      await emailAPI.updateSettings({
+        email_provider: key,
+        email_from_name: form.email_from_name, email_from_address: form.email_from_address,
+        email_reply_to: form.email_reply_to, email_site_url: form.email_site_url,
+      });
+      queryClient.invalidateQueries({ queryKey: ['emailSettings'] });
+      setForm((p) => ({ ...p, smtp_password: '', email_api_key: '' }));
+      toast.success(`${key === 'smtp' ? 'SMTP' : selectedProvider?.label || key} settings saved`);
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Failed to save settings');
+    }
+  };
+
+  // Tests exactly the currently-displayed provider card, using whatever is
+  // typed right now (even if not yet saved) — bypasses the failover chain
+  // so the admin can verify one provider at a time.
+  const [providerTesting, setProviderTesting] = useState(false);
+  const handleTestProviderCard = async () => {
+    if (!testEmail.trim()) return toast.error('Enter a recipient email');
+    const key = form.email_provider || 'brevo';
+    setProviderTesting(true);
+    try {
+      const settings = key === 'smtp'
+        ? { smtp_host: form.smtp_host, smtp_port: form.smtp_port, smtp_user: form.smtp_user, smtp_password: form.smtp_password, smtp_secure: form.smtp_secure, email_from_name: form.email_from_name, email_from_address: form.email_from_address, email_reply_to: form.email_reply_to }
+        : { api_key: form.email_api_key, domain: form.email_api_domain, api_url: form.api_url, api_method: form.api_method, api_headers: form.api_headers, api_body_template: form.api_body_template, email_from_name: form.email_from_name, email_from_address: form.email_from_address, email_reply_to: form.email_reply_to };
+      const { data } = await emailAPI.testProvider(key, { to: testEmail.trim(), settings });
+      toast.success(data.message || 'Test email sent');
+      queryClient.invalidateQueries({ queryKey: ['emailLogs'] });
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Test failed');
+    } finally { setProviderTesting(false); }
+  };
+
+  // ── Failover order ──────────────────────────────────────────────────
+  // Which configured providers are tried, and in what order, when sending
+  // a real email. Local draft is seeded from the saved priority once, then
+  // edited freely until "Save Failover Order" is clicked.
+  const providersStatus = settingsData?.providers_status || {};
+  // Populate the card's non-secret fields (domain, custom API url/method/
+  // headers/body template) when the admin switches WHICH provider they're
+  // viewing — but only then, not on every background settings refetch,
+  // so it never clobbers something they're mid-typing.
+  const lastViewedProviderRef = React.useRef(null);
+  useEffect(() => {
+    const key = form.email_provider || 'brevo';
+    if (key === lastViewedProviderRef.current) return;
+    lastViewedProviderRef.current = key;
+    if (key === 'smtp' || !providersStatus[key]) return;
+    const p = providersStatus[key];
+    setForm((prev) => ({
+      ...prev,
+      email_api_domain: p.domain || '',
+      api_url: p.api_url || '',
+      api_method: p.api_method || 'POST',
+      api_headers: p.api_headers || '',
+      api_body_template: p.api_body_template || '',
+    }));
+  }, [form.email_provider, providersStatus]);
+  const apiKeySetForSelected = !!providersStatus[form.email_provider || 'brevo']?.api_key_set;
+  const [priorityDraft, setPriorityDraft] = useState(null);
+  useEffect(() => {
+    if (priorityDraft === null && settingsData?.provider_priority) {
+      setPriorityDraft(settingsData.provider_priority.length ? settingsData.provider_priority : []);
+    }
+  }, [settingsData, priorityDraft]);
+  const allProviderKeys = ['smtp', ...providers.map((p) => p.key)];
+  const configuredKeys = allProviderKeys.filter((k) => providersStatus[k]?.configured);
+  const activePriority = priorityDraft || [];
+  const inactiveConfigured = configuredKeys.filter((k) => !activePriority.includes(k));
+
+  const providerLabel = (key) => (key === 'smtp' ? 'Custom SMTP' : providers.find((p) => p.key === key)?.label || key);
+  const toggleInPriority = (key) => setPriorityDraft((p) => (p || []).includes(key) ? (p || []).filter((k) => k !== key) : [...(p || []), key]);
+  const movePriority = (index, dir) => setPriorityDraft((p) => {
+    const next = [...(p || [])];
+    const swap = index + dir;
+    if (swap < 0 || swap >= next.length) return next;
+    [next[index], next[swap]] = [next[swap], next[index]];
+    return next;
+  });
+  const savePriorityMutation = useMutation({
+    mutationFn: () => emailAPI.savePriority(activePriority),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['emailSettings'] }); toast.success('Failover order saved'); },
+    onError: (err) => toast.error(err.response?.data?.error || 'Failed to save failover order'),
+  });
 
   const f = (key) => (e) => setForm((p) => ({ ...p, [key]: e.target.value }));
   const cls = 'w-full bg-noir border border-gray-700 rounded-lg px-3 py-2.5 text-white text-sm focus:border-gold outline-none';
@@ -258,8 +394,42 @@ export default function EmailSettings() {
             <div className="flex flex-wrap gap-3 mt-5"><button onClick={handleTestConnection} disabled={connectionTesting} className="btn-outline-gold text-sm"><HiRefresh className={`w-4 h-4 inline mr-2 ${connectionTesting ? 'animate-spin' : ''}`}/>{connectionTesting ? 'Checking…' : 'Test Connection'}</button></div>
           </div>
           <div className="luxury-card p-6 space-y-4"><h3 className="font-playfair font-bold text-white text-lg">Delivery Provider</h3><div className="flex flex-wrap gap-2">{[...providers.map((p)=>({value:p.key,label:p.label})),{value:'smtp',label:'Custom SMTP'}].map((o)=><button key={o.value} onClick={()=>setForm(p=>({...p,email_provider:o.value}))} className={`px-4 py-2 rounded-lg text-sm border ${(form.email_provider||'brevo')===o.value?'bg-gold text-black border-gold font-semibold':'text-gray-400 border-gray-700 hover:text-white'}`}>{o.label}</button>)}</div>{selectedProvider?.setupUrl&&<a href={selectedProvider.setupUrl} target="_blank" rel="noreferrer" className="text-xs text-gold hover:underline inline-flex items-center gap-1">Open {selectedProvider.label} setup <HiExternalLink className="w-3 h-3"/></a>}</div>
-          {(form.email_provider || 'brevo') !== 'smtp' && selectedProvider && <div className="luxury-card p-6 space-y-4"><h3 className="font-playfair font-bold text-white text-lg">{selectedProvider.label} Configuration</h3><div className="grid md:grid-cols-2 gap-4"><div className="md:col-span-2"><label className="text-xs text-gray-400 mb-1 block">{selectedProvider.label} API Key</label><div className="relative"><input type={showApiKey?'text':'password'} value={form.email_api_key||''} onChange={f('email_api_key')} placeholder={apiKeySet?'Leave blank to keep current key':`Paste your ${selectedProvider.label} API key`} className={`${cls} pr-10`}/><button type="button" onClick={()=>setShowApiKey(x=>!x)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">{showApiKey?<HiEyeOff/>:<HiEye/>}</button></div>{apiKeySet&&!form.email_api_key&&<p className="text-xs text-gray-500 mt-1">✓ Credential saved securely. It is never returned to the browser.</p>}</div>{selectedProvider.fields.includes('domain')&&<div className="md:col-span-2"><label className="text-xs text-gray-400 mb-1 block">Sending Domain</label><input value={form.email_api_domain||''} onChange={f('email_api_domain')} placeholder="mg.yourdomain.com" className={cls}/></div>}<div><label className="text-xs text-gray-400 mb-1 block">Public Site URL</label><input value={form.email_site_url||''} onChange={f('email_site_url')} placeholder="https://your-site.example" className={cls}/><p className="text-xs text-gray-500 mt-1">Used for verification, password-reset, order and email links. Leave blank to use SITE_URL/FRONTEND_URL.</p></div><div><label className="text-xs text-gray-400 mb-1 block">From Name</label><input value={form.email_from_name||''} onChange={f('email_from_name')} placeholder="Noor Mist" className={cls}/></div><div><label className="text-xs text-gray-400 mb-1 block">From Address</label><input type="email" value={form.email_from_address||''} onChange={f('email_from_address')} placeholder="noreply@example.com" className={cls}/></div><div className="md:col-span-2"><label className="text-xs text-gray-400 mb-1 block">Reply-To</label><input type="email" value={form.email_reply_to||''} onChange={f('email_reply_to')} placeholder="support@example.com" className={cls}/><p className="text-xs text-gray-500 mt-1">Customer replies go here.</p></div></div><div className="flex flex-wrap gap-3"><button onClick={()=>saveMutation.mutate(form)} className="btn-gold" disabled={saveMutation.isPending}><HiCheck className="w-4 h-4 inline mr-2"/>Save Delivery Settings</button>{apiKeySet&&<button onClick={async()=>{if(!window.confirm('Remove the saved API key?'))return;await emailAPI.clearCredential('api');queryClient.invalidateQueries({queryKey:['emailSettings']});toast.success('API key removed');}} className="text-xs text-red-400 hover:text-red-300">Remove API key</button>}</div></div>}
-          {(form.email_provider || 'brevo') === 'smtp' && <div className="luxury-card p-6 space-y-4"><h3 className="font-playfair font-bold text-white text-lg">Custom SMTP</h3><div className="grid md:grid-cols-2 gap-4"><div><label className="text-xs text-gray-400 mb-1 block">SMTP Host</label><input value={form.smtp_host||''} onChange={f('smtp_host')} placeholder="smtp.example.com" className={cls}/></div><div><label className="text-xs text-gray-400 mb-1 block">Port</label><input type="number" value={form.smtp_port||'587'} onChange={(e)=>{const port=e.target.value;setForm(p=>({...p,smtp_port:port,smtp_secure:port==='465'?'true':port==='587'?'false':p.smtp_secure}))}} className={cls}/></div><div><label className="text-xs text-gray-400 mb-1 block">Username / Email</label><input value={form.smtp_user||''} onChange={f('smtp_user')} className={cls}/></div><div><label className="text-xs text-gray-400 mb-1 block">Password / App Password</label><div className="relative"><input type={showPassword?'text':'password'} value={form.smtp_password||''} onChange={f('smtp_password')} placeholder={passwordSet?'Leave blank to keep current password':'Paste SMTP password / app key'} className={`${cls} pr-10`}/><button type="button" onClick={()=>setShowPassword(x=>!x)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">{showPassword?<HiEyeOff/>:<HiEye/>}</button></div></div><div><label className="text-xs text-gray-400 mb-1 block">Encryption</label><select value={form.smtp_secure||'false'} onChange={f('smtp_secure')} className={cls}><option value="false">STARTTLS</option><option value="true">SSL/TLS</option></select></div><div><label className="text-xs text-gray-400 mb-1 block">Public Site URL</label><input value={form.email_site_url||''} onChange={f('email_site_url')} placeholder="https://your-site.example" className={cls}/></div><div><label className="text-xs text-gray-400 mb-1 block">From Name</label><input value={form.email_from_name||''} onChange={f('email_from_name')} placeholder="Noor Mist" className={cls}/></div><div><label className="text-xs text-gray-400 mb-1 block">From Address</label><input type="email" value={form.email_from_address||''} onChange={f('email_from_address')} placeholder="noreply@example.com" className={cls}/></div><div><label className="text-xs text-gray-400 mb-1 block">Reply-To</label><input type="email" value={form.email_reply_to||''} onChange={f('email_reply_to')} placeholder="support@example.com" className={cls}/></div></div><p className="text-xs text-gray-500">Port 587 normally uses STARTTLS; port 465 normally uses SSL/TLS.</p><div className="flex flex-wrap gap-3"><button onClick={()=>saveMutation.mutate(form)} className="btn-gold" disabled={saveMutation.isPending}><HiCheck className="w-4 h-4 inline mr-2"/>Save SMTP Settings</button>{passwordSet&&<button onClick={async()=>{if(!window.confirm('Remove the saved SMTP password?'))return;await emailAPI.clearCredential('smtp');queryClient.invalidateQueries({queryKey:['emailSettings']});toast.success('SMTP credential removed');}} className="text-xs text-red-400 hover:text-red-300">Remove password</button>}</div></div>}
+          {(form.email_provider || 'brevo') !== 'smtp' && selectedProvider && <div className="luxury-card p-6 space-y-4"><h3 className="font-playfair font-bold text-white text-lg">{selectedProvider.label} Configuration</h3><div className="grid md:grid-cols-2 gap-4">{selectedProvider.key !== 'custom' && <div className="md:col-span-2"><label className="text-xs text-gray-400 mb-1 block">{selectedProvider.label} API Key</label><div className="relative"><input type={showApiKey?'text':'password'} value={form.email_api_key||''} onChange={f('email_api_key')} placeholder={apiKeySetForSelected?'Leave blank to keep current key':`Paste your ${selectedProvider.label} API key`} className={`${cls} pr-10`}/><button type="button" onClick={()=>setShowApiKey(x=>!x)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">{showApiKey?<HiEyeOff/>:<HiEye/>}</button></div>{apiKeySetForSelected&&!form.email_api_key&&<p className="text-xs text-gray-500 mt-1">✓ Credential saved securely. It is never returned to the browser.</p>}</div>}{selectedProvider.fields.includes('domain')&&<div className="md:col-span-2"><label className="text-xs text-gray-400 mb-1 block">Sending Domain</label><input value={form.email_api_domain||''} onChange={f('email_api_domain')} placeholder="mg.yourdomain.com" className={cls}/></div>}
+            {selectedProvider.key === 'custom' && <>
+              <div className="md:col-span-2"><label className="text-xs text-gray-400 mb-1 block">API Key / Token</label><div className="relative"><input type={showApiKey?'text':'password'} value={form.email_api_key||''} onChange={f('email_api_key')} placeholder={apiKeySetForSelected?'Leave blank to keep current key':'Paste your API key or token'} className={`${cls} pr-10`}/><button type="button" onClick={()=>setShowApiKey(x=>!x)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">{showApiKey?<HiEyeOff/>:<HiEye/>}</button></div><p className="text-xs text-gray-500 mt-1">Reference this below as <code className="text-gold">{'{{api_key}}'}</code> — it's substituted in, never displayed in the templates below.</p></div>
+              <div className="md:col-span-2"><label className="text-xs text-gray-400 mb-1 block">API Endpoint URL</label><input value={form.api_url||''} onChange={f('api_url')} placeholder="https://api.youremailservice.com/v1/send" className={`${cls} font-mono text-xs`}/></div>
+              <div><label className="text-xs text-gray-400 mb-1 block">HTTP Method</label><select value={form.api_method||'POST'} onChange={f('api_method')} className={cls}><option value="POST">POST</option><option value="PUT">PUT</option></select></div>
+              <div className="md:col-span-2"><label className="text-xs text-gray-400 mb-1 block">Headers (JSON)</label><textarea rows={2} value={form.api_headers||''} onChange={f('api_headers')} placeholder={'{"Authorization":"Bearer {{api_key}}","Content-Type":"application/json"}'} className={`${cls} font-mono text-xs`}/></div>
+              <div className="md:col-span-2"><label className="text-xs text-gray-400 mb-1 block">Body Template (JSON)</label><textarea rows={4} value={form.api_body_template||''} onChange={f('api_body_template')} placeholder={'{"to":"{{to}}","from":"{{from_email}}","subject":"{{subject}}","html":"{{html}}"}'} className={`${cls} font-mono text-xs`}/><p className="text-xs text-gray-500 mt-1">Tokens: <code className="text-gold">{'{{api_key}} {{to}} {{from_name}} {{from_email}} {{reply_to}} {{subject}} {{html}}'}</code></p></div>
+            </>}
+            <div><label className="text-xs text-gray-400 mb-1 block">Public Site URL</label><input value={form.email_site_url||''} onChange={f('email_site_url')} placeholder="https://your-site.example" className={cls}/><p className="text-xs text-gray-500 mt-1">Used for verification, password-reset, order and email links. Leave blank to use SITE_URL/FRONTEND_URL.</p></div><div><label className="text-xs text-gray-400 mb-1 block">From Name</label><input value={form.email_from_name||''} onChange={f('email_from_name')} placeholder="Noor Mist" className={cls}/></div><div><label className="text-xs text-gray-400 mb-1 block">From Address</label><input type="email" value={form.email_from_address||''} onChange={f('email_from_address')} placeholder="noreply@example.com" className={cls}/></div><div className="md:col-span-2"><label className="text-xs text-gray-400 mb-1 block">Reply-To</label><input type="email" value={form.email_reply_to||''} onChange={f('email_reply_to')} placeholder="support@example.com" className={cls}/><p className="text-xs text-gray-500 mt-1">Customer replies go here.</p></div></div><div className="flex flex-wrap gap-3 items-center"><button onClick={handleSaveProviderCard} className="btn-gold"><HiCheck className="w-4 h-4 inline mr-2"/>Save {selectedProvider.label} Settings</button><button onClick={handleTestProviderCard} disabled={providerTesting||!testEmail.trim()} className="btn-outline-gold text-sm">{providerTesting?'Testing…':`Test ${selectedProvider.label}`}</button>{apiKeySetForSelected&&<button onClick={async()=>{if(!window.confirm(`Remove the saved ${selectedProvider.label} credentials?`))return;await emailAPI.deleteProviderCredentials(selectedProvider.key);queryClient.invalidateQueries({queryKey:['emailSettings']});toast.success('Credentials removed');}} className="text-xs text-red-400 hover:text-red-300">Remove credentials</button>}{!testEmail.trim()&&<p className="text-xs text-gray-600">Enter a recipient below to test this provider directly.</p>}</div></div>}
+          {(form.email_provider || 'brevo') === 'smtp' && <div className="luxury-card p-6 space-y-4"><h3 className="font-playfair font-bold text-white text-lg">Custom SMTP</h3><div className="grid md:grid-cols-2 gap-4"><div><label className="text-xs text-gray-400 mb-1 block">SMTP Host</label><input value={form.smtp_host||''} onChange={f('smtp_host')} placeholder="smtp.example.com" className={cls}/></div><div><label className="text-xs text-gray-400 mb-1 block">Port</label><input type="number" value={form.smtp_port||'587'} onChange={(e)=>{const port=e.target.value;setForm(p=>({...p,smtp_port:port,smtp_secure:port==='465'?'true':port==='587'?'false':p.smtp_secure}))}} className={cls}/></div><div><label className="text-xs text-gray-400 mb-1 block">Username / Email</label><input value={form.smtp_user||''} onChange={f('smtp_user')} className={cls}/></div><div><label className="text-xs text-gray-400 mb-1 block">Password / App Password</label><div className="relative"><input type={showPassword?'text':'password'} value={form.smtp_password||''} onChange={f('smtp_password')} placeholder={passwordSet?'Leave blank to keep current password':'Paste SMTP password / app key'} className={`${cls} pr-10`}/><button type="button" onClick={()=>setShowPassword(x=>!x)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">{showPassword?<HiEyeOff/>:<HiEye/>}</button></div></div><div><label className="text-xs text-gray-400 mb-1 block">Encryption</label><select value={form.smtp_secure||'false'} onChange={f('smtp_secure')} className={cls}><option value="false">STARTTLS</option><option value="true">SSL/TLS</option></select></div><div><label className="text-xs text-gray-400 mb-1 block">Public Site URL</label><input value={form.email_site_url||''} onChange={f('email_site_url')} placeholder="https://your-site.example" className={cls}/></div><div><label className="text-xs text-gray-400 mb-1 block">From Name</label><input value={form.email_from_name||''} onChange={f('email_from_name')} placeholder="Noor Mist" className={cls}/></div><div><label className="text-xs text-gray-400 mb-1 block">From Address</label><input type="email" value={form.email_from_address||''} onChange={f('email_from_address')} placeholder="noreply@example.com" className={cls}/></div><div><label className="text-xs text-gray-400 mb-1 block">Reply-To</label><input type="email" value={form.email_reply_to||''} onChange={f('email_reply_to')} placeholder="support@example.com" className={cls}/></div></div><p className="text-xs text-gray-500">Port 587 normally uses STARTTLS; port 465 normally uses SSL/TLS. Many hosts (including Railway's Free/Hobby tiers) block outbound SMTP ports entirely — if this never works, use an API provider or Custom API above instead.</p><div className="flex flex-wrap gap-3 items-center"><button onClick={handleSaveProviderCard} className="btn-gold"><HiCheck className="w-4 h-4 inline mr-2"/>Save SMTP Settings</button><button onClick={handleTestProviderCard} disabled={providerTesting||!testEmail.trim()} className="btn-outline-gold text-sm">{providerTesting?'Testing…':'Test SMTP'}</button>{passwordSet&&<button onClick={async()=>{if(!window.confirm('Remove the saved SMTP password?'))return;await emailAPI.deleteProviderCredentials('smtp');queryClient.invalidateQueries({queryKey:['emailSettings']});toast.success('SMTP credential removed');}} className="text-xs text-red-400 hover:text-red-300">Remove password</button>}</div></div>}
+
+          <div className="luxury-card p-6 space-y-3">
+            <div>
+              <h3 className="font-playfair font-bold text-white text-lg">Failover Order</h3>
+              <p className="text-xs text-gray-500 mt-1">If the top provider fails to deliver, the next one in this list is tried automatically — configure and save each provider above first, then add it here.</p>
+            </div>
+            {activePriority.length === 0 && <p className="text-xs text-gray-600">No failover order set — sending uses only the Delivery Provider selected above.</p>}
+            {activePriority.map((key, i) => (
+              <div key={key} className="flex items-center gap-3 bg-noir rounded-lg border border-gray-800 px-3 py-2">
+                <span className="text-xs text-gold font-mono w-5">{i + 1}.</span>
+                <span className="text-sm text-white flex-1">{providerLabel(key)}</span>
+                <button onClick={() => movePriority(i, -1)} disabled={i === 0} className="text-gray-400 hover:text-white disabled:opacity-20 text-xs px-1">▲</button>
+                <button onClick={() => movePriority(i, 1)} disabled={i === activePriority.length - 1} className="text-gray-400 hover:text-white disabled:opacity-20 text-xs px-1">▼</button>
+                <button onClick={() => toggleInPriority(key)} className="text-red-400 hover:text-red-300 text-xs px-2">Remove</button>
+              </div>
+            ))}
+            {inactiveConfigured.length > 0 && (
+              <div className="flex flex-wrap gap-2 pt-1">
+                {inactiveConfigured.map((key) => (
+                  <button key={key} onClick={() => toggleInPriority(key)} className="text-xs px-3 py-1.5 rounded-lg border border-gray-700 text-gray-300 hover:border-gold/50 hover:text-gold transition-colors">+ Add {providerLabel(key)}</button>
+                ))}
+              </div>
+            )}
+            <button onClick={() => savePriorityMutation.mutate()} disabled={savePriorityMutation.isPending} className="btn-outline-gold text-sm mt-2"><HiCheck className="w-4 h-4 inline mr-2"/>Save Failover Order</button>
+          </div>
+
           <div className="luxury-card p-6 space-y-4"><h3 className="font-playfair font-bold text-white text-lg">Test Email</h3><div className="grid md:grid-cols-2 gap-4"><div><label className="text-xs text-gray-400 mb-1 block">Recipient</label><input type="email" value={testEmail} onChange={e=>setTestEmail(e.target.value)} placeholder="your@email.com" className={cls}/></div><div><label className="text-xs text-gray-400 mb-1 block">Test Subject</label><input value={form.email_test_subject||''} onChange={f('email_test_subject')} placeholder="{{store_name}} — Email Configuration Test" className={cls}/></div><div className="md:col-span-2"><label className="text-xs text-gray-400 mb-1 block">Test Message (HTML)</label><textarea rows={8} value={form.email_test_body||''} onChange={f('email_test_body')} className={`${cls} font-mono text-xs`}/><p className="text-xs text-gray-500 mt-1">Placeholders: {'{{store_name}}'}, {'{{provider}}'}, {'{{from_address}}'}, {'{{recipient_email}}'}, {'{{sent_at}}'}</p></div><div className="md:col-span-2"><label className="text-xs text-gray-400 mb-1 block">Test Footer</label><input value={form.email_test_footer||''} onChange={f('email_test_footer')} placeholder="This is an automated test message." className={cls}/></div></div><div className="flex flex-wrap gap-3"><button onClick={()=>setPreview({subject:form.email_test_subject,body:form.email_test_body})} className="btn-outline-gold text-sm"><HiEye className="w-4 h-4 inline mr-2"/>Preview</button><button onClick={()=>saveMutation.mutate(form)} className="btn-outline-gold text-sm" disabled={saveMutation.isPending}><HiCheck className="w-4 h-4 inline mr-2"/>Save Test Content</button><button onClick={handleTest} disabled={testing||!testEmail.trim()} className="btn-gold text-sm">{testing?'Sending…':'Send Test Email'}</button></div></div>
         </motion.div>
       )}

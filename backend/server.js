@@ -219,6 +219,9 @@ app.use('/api/payments', require('./routes/payments'));
 
 app.use('/api/bank-settings', require('./routes/bankSettings'));
 
+app.use('/api/admin/whatsapp', require('./routes/whatsapp'));
+app.use('/api/whatsapp', require('./routes/whatsappPublic'));
+
 // ================================
 // Health Check
 // ================================

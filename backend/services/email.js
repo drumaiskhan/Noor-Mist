@@ -174,22 +174,152 @@ const API_PROVIDERS = {
         }),
       }),
   },
+  // Generic HTTP API provider — for any transactional-email API not listed
+  // above (or a private/internal sending gateway). The admin supplies the
+  // endpoint, HTTP method, headers, and a JSON body template themselves;
+  // {{tokens}} in the URL/headers/body are substituted with the send's
+  // actual values before the request goes out. This is what makes SMTP
+  // genuinely optional rather than the only option when a store's host
+  // blocks outbound SMTP ports (a common Railway Free/Hobby-tier limit).
+  custom: {
+    label: 'Custom API',
+    setupUrl: null,
+    fields: ['api_url', 'api_method', 'api_headers', 'api_body_template'],
+    send: ({ apiKey, apiUrl, apiMethod, apiHeaders, apiBodyTemplate, fromName, fromAddress, replyTo, to, subject, html }) => {
+      if (!apiUrl) throw new Error('Custom API URL is not configured');
+      if (!apiBodyTemplate) throw new Error('Custom API body template is not configured');
+      const tokens = {
+        api_key: apiKey || '',
+        to, from_name: fromName || '', from_email: fromAddress || '',
+        reply_to: replyTo || '', subject: subject || '',
+        // JSON-escaped so the HTML content can sit inside a JSON string
+        // literal in the body template without breaking the payload.
+        html: JSON.stringify(html || '').slice(1, -1),
+      };
+      const substitute = (str) => String(str || '').replace(/{{\s*(\w+)\s*}}/g, (_, key) => (tokens[key] !== undefined ? tokens[key] : ''));
+
+      let headers = { 'Content-Type': 'application/json' };
+      if (apiHeaders) {
+        try { headers = JSON.parse(substitute(apiHeaders)); }
+        catch { throw new Error('Custom API headers must be valid JSON, e.g. {"Authorization":"Bearer {{api_key}}"}'); }
+      }
+      const body = substitute(apiBodyTemplate);
+      // Validate the substituted body is well-formed JSON before sending —
+      // a broken template should fail fast with a clear message, not as a
+      // confusing 400 from the third-party API.
+      try { JSON.parse(body); } catch { throw new Error('Custom API body template did not produce valid JSON after substitution — check for unescaped quotes'); }
+
+      return httpJson(substitute(apiUrl), { method: apiMethod || 'POST', headers, body });
+    },
+  },
 };
 
-// 'smtp' unless the admin has picked a known API provider and saved a key
-// for it — in which case that provider's HTTP API is used instead.
+// ── Per-provider credential storage ───────────────────────────────────────
+// Each API provider's credentials are stored under its own settings key
+// (email_creds_<provider>, JSON-encoded) so an admin can configure several
+// providers side by side — e.g. Brevo AND SendGrid AND a Custom API — for
+// failover, without saving one overwriting another's key. SMTP keeps using
+// its existing dedicated smtp_* keys (already isolated, unchanged).
+//
+// Backward compatible: accounts configured before this existed stored a
+// single api key/domain under the old email_api_key/email_api_domain keys
+// for whichever provider was "active" (email_provider). Those are honored
+// as a fallback for that one provider until the admin re-saves it, at
+// which point it's written into the new per-provider format going forward.
+function getProviderCredentials(settings, providerKey) {
+  if (providerKey === 'smtp') return {};
+  const raw = settings[`email_creds_${providerKey}`];
+  if (raw) {
+    try { return JSON.parse(raw); } catch { /* fall through to legacy */ }
+  }
+  if (providerKey === settings.email_provider && (settings.email_api_key || settings.email_api_domain)) {
+    return { api_key: settings.email_api_key, domain: settings.email_api_domain };
+  }
+  return {};
+}
+
+function providerHasCredentials(settings, providerKey) {
+  if (providerKey === 'smtp') return !!settings.smtp_host;
+  if (!API_PROVIDERS[providerKey]) return false;
+  const creds = getProviderCredentials(settings, providerKey);
+  if (providerKey === 'custom') return !!(creds.api_url && creds.api_body_template);
+  return !!creds.api_key;
+}
+
+// 'smtp' unless the admin has picked a known API provider and saved
+// credentials for it — in which case that provider's HTTP API is used.
+// Used as the single-provider default when no explicit failover chain
+// (email_provider_priority) has been configured.
 function resolveProvider(settings) {
   const provider = settings.email_provider;
-  if (provider && provider !== 'smtp' && API_PROVIDERS[provider] && settings.email_api_key) {
+  if (provider && provider !== 'smtp' && providerHasCredentials(settings, provider)) {
     return provider;
   }
   return 'smtp';
 }
 
-async function sendViaApiProvider(providerKey, { apiKey, domain, fromName, fromAddress, replyTo, to, subject, html }) {
+// The ordered list of providers to attempt, for failover. Explicit priority
+// (set via PUT /api/email/priority) wins; if the admin has never touched
+// that feature, behavior is unchanged from before — a single provider,
+// exactly as resolveProvider() already picked.
+function resolveProviderChain(settings) {
+  let chain = [];
+  try { chain = JSON.parse(settings.email_provider_priority || '[]'); } catch { chain = []; }
+  if (!Array.isArray(chain) || !chain.length) chain = [resolveProvider(settings)];
+
+  const seen = new Set();
+  const filtered = chain.filter((p) => {
+    if (typeof p !== 'string' || seen.has(p)) return false;
+    seen.add(p);
+    if (p !== 'smtp' && !API_PROVIDERS[p]) return false;
+    return providerHasCredentials(settings, p);
+  });
+  // Never return an empty chain — fall through to whatever resolveProvider
+  // picks (which itself degrades to 'smtp'), so the existing "not
+  // configured" handling in sendEmail() still fires with a clear message
+  // instead of the loop below silently doing nothing.
+  return filtered.length ? filtered : [resolveProvider(settings)];
+}
+
+async function sendViaApiProvider(providerKey, { apiKey, domain, apiUrl, apiMethod, apiHeaders, apiBodyTemplate, fromName, fromAddress, replyTo, to, subject, html }) {
   const provider = API_PROVIDERS[providerKey];
   if (!provider) throw new Error(`Unknown email API provider: ${providerKey}`);
-  return provider.send({ apiKey, domain, fromName, fromAddress, replyTo, to, subject, html });
+  return provider.send({ apiKey, domain, apiUrl, apiMethod, apiHeaders, apiBodyTemplate, fromName, fromAddress, replyTo, to, subject, html });
+}
+
+// Sends via exactly one provider (no failover) — used by the per-provider
+// "test this provider" endpoint and as the building block sendEmail()'s
+// failover loop calls for each provider in the chain.
+async function attemptProviderSend(providerKey, settings, { fromName, fromAddress, replyTo, to, subject, html }) {
+  if (providerKey === 'smtp') {
+    const transporter = await createTransporter(settings);
+    if (!transporter) throw new Error('SMTP is not configured (no host set)');
+    const info = await transporter.sendMail({
+      from: `"${fromName}" <${fromAddress}>`,
+      to,
+      replyTo: replyTo || undefined,
+      subject,
+      html,
+    });
+    return { providerMessageId: info?.messageId || null, raw: info };
+  }
+
+  const creds = getProviderCredentials(settings, providerKey);
+  const response = await sendViaApiProvider(providerKey, {
+    apiKey: creds.api_key,
+    domain: creds.domain,
+    apiUrl: creds.api_url,
+    apiMethod: creds.api_method,
+    apiHeaders: creds.api_headers,
+    apiBodyTemplate: creds.api_body_template,
+    fromName,
+    fromAddress,
+    replyTo,
+    to,
+    subject,
+    html,
+  });
+  return { providerMessageId: response?.messageId || response?.id || response?.MessageID || null, raw: response };
 }
 
 // ── Branded shell ───────────────────────────────────────────────────────
@@ -223,65 +353,68 @@ function emailShell({ innerHtml, storeName, footerNote }) {
   </div>`;
 }
 
+// Tries every provider in the resolved failover chain, in order, and
+// returns as soon as one succeeds. Every attempt (success or failure) gets
+// its own row in email_delivery_logs so the admin can see exactly which
+// provider(s) were tried and why any of them failed — not just the final
+// outcome. Only throws if every provider in the chain failed.
 const sendEmail = async ({ to, subject, html, raw = false, settings: settingsOverride, footerNote }) => {
   const settings = settingsOverride || (await getEmailSettings());
   const fromName = settings.email_from_name || 'Noor Mist';
   const fromAddress = settings.email_from_address || settings.smtp_user || process.env.EMAIL_FROM || process.env.EMAIL_USER;
   const replyTo = settings.email_reply_to || '';
   const finalHtml = raw ? html : emailShell({ innerHtml: html, storeName: fromName, footerNote });
-  const provider = resolveProvider(settings);
   const startedAt = Date.now();
 
-  const logDelivery = async ({ status, errorMessage = null, providerMessageId = null }) => {
+  const logDelivery = async (providerKey, { status, errorMessage = null, providerMessageId = null }) => {
     try {
       await query(
         `INSERT INTO email_delivery_logs (recipient, subject, email_type, provider, status, error_message, provider_message_id, duration_ms) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
-        [to, subject, settings.email_current_type || 'transactional', provider, status, errorMessage, providerMessageId, Date.now() - startedAt]
+        [to, subject, settings.email_current_type || 'transactional', providerKey, status, errorMessage, providerMessageId, Date.now() - startedAt]
       );
     } catch (e) { console.error('email_delivery_logs:', e.message); }
   };
 
   if (!fromAddress) {
-    await logDelivery({ status: 'skipped', errorMessage: 'No from address configured' });
+    await logDelivery('none', { status: 'skipped', errorMessage: 'No from address configured' });
     console.log('Email not configured (no from address), skipping:', subject);
     return { ok: false, reason: 'not_configured' };
   }
 
-  try {
-    if (provider !== 'smtp') {
-      const response = await sendViaApiProvider(provider, {
-        apiKey: settings.email_api_key,
-        domain: settings.email_api_domain,
-        fromName,
-        fromAddress,
-        replyTo,
-        to,
-        subject,
-        html: finalHtml,
-      });
-      await logDelivery({ status: 'sent', providerMessageId: response?.messageId || response?.id || response?.MessageID || null });
-      return { ok: true, settings, providerResponse: response };
-    }
-
-    const transporter = await createTransporter(settings);
-    if (!transporter) {
-      await logDelivery({ status: 'skipped', errorMessage: 'Email provider is not configured' });
-      console.log('Email not configured, skipping:', subject);
-      return { ok: false, reason: 'not_configured' };
-    }
-    const info = await transporter.sendMail({
-      from: `"${fromName}" <${fromAddress}>`,
-      to,
-      replyTo: replyTo || undefined,
-      subject,
-      html: finalHtml,
-    });
-    await logDelivery({ status: 'sent', providerMessageId: info?.messageId || null });
-    return { ok: true, settings, providerMessageId: info?.messageId || null };
-  } catch (error) {
-    await logDelivery({ status: 'failed', errorMessage: error.message });
-    throw error;
+  // Genuinely nothing set up yet (fresh install) — skip quietly rather than
+  // attempting a send that's guaranteed to fail and throwing through the
+  // loop below. Once at least one provider IS configured, failures from
+  // here on are real attempts and do throw (after trying the whole chain).
+  const anyProviderConfigured = ['smtp', ...Object.keys(API_PROVIDERS)].some((p) => providerHasCredentials(settings, p));
+  if (!anyProviderConfigured) {
+    await logDelivery('none', { status: 'skipped', errorMessage: 'Email provider is not configured' });
+    console.log('Email not configured, skipping:', subject);
+    return { ok: false, reason: 'not_configured' };
   }
+
+  const chain = resolveProviderChain(settings);
+  const attempts = [];
+  let lastError = null;
+
+  for (const providerKey of chain) {
+    try {
+      const result = await attemptProviderSend(providerKey, settings, { fromName, fromAddress, replyTo, to, subject, html: finalHtml });
+      await logDelivery(providerKey, { status: 'sent', providerMessageId: result.providerMessageId });
+      attempts.push({ provider: providerKey, status: 'sent' });
+      return { ok: true, provider: providerKey, attempts, settings, providerResponse: result.raw, providerMessageId: result.providerMessageId };
+    } catch (error) {
+      await logDelivery(providerKey, { status: 'failed', errorMessage: error.message });
+      attempts.push({ provider: providerKey, status: 'failed', error: error.message });
+      lastError = error;
+      // Fall through to the next provider in the chain, if any.
+    }
+  }
+
+  // Every provider in the chain failed (or nothing is configured at all —
+  // chain always has at least one entry, see resolveProviderChain()).
+  const finalError = lastError || new Error('No email provider is configured');
+  finalError.attempts = attempts;
+  throw finalError;
 };
 
 // ── Editable templates ──────────────────────────────────────────────────
@@ -781,6 +914,10 @@ module.exports = {
   sendEmail,
   sendTypedEmail,
   resolveProvider,
+  resolveProviderChain,
+  getProviderCredentials,
+  providerHasCredentials,
+  attemptProviderSend,
   sendViaApiProvider,
   API_PROVIDERS,
   sendOrderReceivedEmail,

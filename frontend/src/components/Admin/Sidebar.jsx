@@ -70,6 +70,7 @@ const navItems = [
 
 
   { path: '/admin/email-settings', label: 'Email Settings', icon: HiMail },
+  { path: '/admin/whatsapp-settings', label: 'WhatsApp Notifications', icon: HiAnnotation },
   { path: '/admin/payment-settings', label: 'Payment Settings', icon: HiBadgeCheck },
   { path: '/admin/bank-settings', label: 'Bank Settings', icon: HiLibrary },
   { path: '/admin/payment-shipping', label: 'Shipping', icon: HiCreditCard },

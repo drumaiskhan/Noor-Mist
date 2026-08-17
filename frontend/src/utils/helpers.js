@@ -155,6 +155,26 @@ export const classNames = (...classes) => {
   return classes.filter(Boolean).join(' ');
 };
 
+// Validates a phone number the same way the backend's WhatsApp service
+// does (see backend/utils/phone.js): accepts 03001234567, 0300-1234567,
+// +923001234567, 923001234567, or a bare 3001234567 — and doesn't turn
+// "+923001234567" into "92923001234567". Falls back to a general
+// international-length check for non-Pakistani numbers.
+export const isValidWhatsAppPhone = (raw) => {
+  const value = String(raw || '').trim();
+  if (!value) return false;
+  const hasPlus = value.startsWith('+');
+  const digits = value.replace(/[^\d]/g, '');
+  if (!digits) return false;
+
+  const pkMobile = /^3\d{9}$/;
+  if (digits.startsWith('92') && pkMobile.test(digits.slice(2))) return true;
+  if (digits.startsWith('0') && pkMobile.test(digits.slice(1))) return true;
+  if (pkMobile.test(digits)) return true;
+
+  return hasPlus || (digits.length >= 8 && digits.length <= 15);
+};
+
 // Updates the <link rel="icon"> in <head> to the given URL, creating it if
 // missing (index.html only ships a static default favicon). Also updates the
 // tab title when a site name is provided.

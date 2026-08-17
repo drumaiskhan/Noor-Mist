@@ -10,6 +10,10 @@ const {
   getEmailSettings,
   verifyUnsubscribeToken,
   resolveProvider,
+  resolveProviderChain,
+  getProviderCredentials,
+  providerHasCredentials,
+  attemptProviderSend,
   API_PROVIDERS,
   sendEmail,
 } = require('../services/email');
@@ -23,6 +27,23 @@ const AUDIENCE_LABELS = {
   with_orders: 'Customers with orders',
   selected: 'Selected customers',
 };
+
+// Merges an inline settings override (e.g. currently-typed-but-unsaved form
+// values) onto the saved settings. A blank string in the override means
+// "no opinion, use whatever's saved" — the same "leave blank to keep
+// current" convention this app already uses for password/API-key fields
+// everywhere else. Without this, testing right after a save (which clears
+// the password/key field back to blank once it's safely stored) would
+// silently overwrite the real saved secret with an empty string.
+function mergeSettingsOverride(saved, override) {
+  if (!override || typeof override !== 'object') return saved;
+  const merged = { ...saved };
+  for (const [key, value] of Object.entries(override)) {
+    if (value === '' || value === undefined || value === null) continue;
+    merged[key] = value;
+  }
+  return merged;
+}
 
 // GET /api/email/providers — lets the admin UI render provider options
 // (and which extra fields, like Mailgun's domain, each one needs) without
@@ -43,6 +64,29 @@ router.get('/settings', requireAdmin, async (req, res) => {
     const result = await query("SELECT key, value FROM settings WHERE key LIKE 'smtp_%' OR key LIKE 'email_%'");
     const settings = {};
     result.rows.forEach((row) => { settings[row.key] = row.value; });
+
+    // Compute per-provider status BEFORE stripping secret fields below —
+    // getProviderCredentials()'s legacy fallback reads settings.email_api_key.
+    const providersStatus = {};
+    for (const key of ['smtp', ...Object.keys(API_PROVIDERS)]) {
+      if (key === 'smtp') {
+        providersStatus.smtp = { configured: providerHasCredentials(settings, 'smtp') };
+        continue;
+      }
+      const creds = getProviderCredentials(settings, key);
+      providersStatus[key] = {
+        configured: providerHasCredentials(settings, key),
+        api_key_set: !!creds.api_key,
+        domain: creds.domain || '',
+        api_url: creds.api_url || '',
+        api_method: creds.api_method || 'POST',
+        api_headers: creds.api_headers || '',
+        api_body_template: creds.api_body_template || '',
+      };
+    }
+    let priority = [];
+    try { priority = JSON.parse(settings.email_provider_priority || '[]'); } catch { priority = []; }
+
     // Never send the real password back to the client — not even masked.
     // Returning a fixed-length placeholder (e.g. 8 dots) made it look like
     // a long API key had been "shortened" on save, when really it was just
@@ -55,7 +99,8 @@ router.get('/settings', requireAdmin, async (req, res) => {
     // back to the client, just whether one is on file.
     const email_api_key_set = !!settings.email_api_key;
     delete settings.email_api_key;
-    res.json({ settings, smtp_password_set, email_api_key_set });
+
+    res.json({ settings, smtp_password_set, email_api_key_set, providers_status: providersStatus, provider_priority: priority });
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch email settings' });
   }
@@ -95,6 +140,99 @@ router.post('/clear-credential', requireAdmin, async (req, res) => {
   catch (error) { res.status(500).json({ error: 'Failed to remove credential' }); }
 });
 
+// PUT /api/email/providers/:key — save ONE provider's credentials without
+// touching any other provider's saved credentials. This is what makes it
+// possible to have Brevo AND SendGrid AND a Custom API all configured at
+// once for failover, instead of the old single email_api_key slot that
+// only ever held one provider's key at a time.
+router.put('/providers/:key', requireAdmin, async (req, res) => {
+  try {
+    const key = req.params.key;
+    if (key !== 'smtp' && !API_PROVIDERS[key]) return res.status(400).json({ error: `Unknown provider: ${key}` });
+
+    if (key === 'smtp') {
+      const allowed = ['smtp_host', 'smtp_port', 'smtp_user', 'smtp_password', 'smtp_secure'];
+      for (const k of allowed) {
+        if (req.body[k] === undefined) continue;
+        if (k === 'smtp_password' && req.body[k] === '') continue; // blank = keep existing
+        await query('INSERT INTO settings (key, value) VALUES ($1,$2) ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value, updated_at=NOW()', [k, String(req.body[k])]);
+      }
+      return res.json({ message: 'SMTP credentials saved' });
+    }
+
+    // API-type provider — merge onto whatever's already saved so a blank
+    // api_key field means "keep the current key", same pattern as SMTP's
+    // password field and the old single-provider email_api_key field.
+    const existingRow = await query('SELECT value FROM settings WHERE key=$1', [`email_creds_${key}`]);
+    let existing = {};
+    if (existingRow.rows[0]) { try { existing = JSON.parse(existingRow.rows[0].value); } catch { existing = {}; } }
+
+    const incoming = {
+      api_key: req.body.api_key === '' ? existing.api_key : (req.body.api_key ?? existing.api_key ?? ''),
+      domain: req.body.domain ?? existing.domain ?? '',
+      api_url: req.body.api_url ?? existing.api_url ?? '',
+      api_method: req.body.api_method ?? existing.api_method ?? 'POST',
+      api_headers: req.body.api_headers ?? existing.api_headers ?? '',
+      api_body_template: req.body.api_body_template ?? existing.api_body_template ?? '',
+    };
+
+    if (key === 'custom') {
+      if (incoming.api_headers) { try { JSON.parse(incoming.api_headers); } catch { return res.status(400).json({ error: 'Headers must be valid JSON, e.g. {"Authorization":"Bearer {{api_key}}"}' }); } }
+    }
+
+    await query(
+      'INSERT INTO settings (key, value) VALUES ($1,$2) ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value, updated_at=NOW()',
+      [`email_creds_${key}`, JSON.stringify(incoming)]
+    );
+    res.json({ message: `${API_PROVIDERS[key].label} credentials saved` });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to save provider credentials' });
+  }
+});
+
+// DELETE /api/email/providers/:key — remove one provider's saved
+// credentials (also drops it from the failover chain if present there).
+router.delete('/providers/:key', requireAdmin, async (req, res) => {
+  try {
+    const key = req.params.key;
+    if (key === 'smtp') {
+      await query('DELETE FROM settings WHERE key=$1', ['smtp_password']);
+    } else {
+      await query('DELETE FROM settings WHERE key=$1', [`email_creds_${key}`]);
+    }
+    const row = await query("SELECT value FROM settings WHERE key='email_provider_priority'");
+    if (row.rows[0]) {
+      try {
+        const priority = JSON.parse(row.rows[0].value).filter((p) => p !== key);
+        await query("UPDATE settings SET value=$1, updated_at=NOW() WHERE key='email_provider_priority'", [JSON.stringify(priority)]);
+      } catch { /* ignore malformed existing priority */ }
+    }
+    res.json({ message: 'Provider credentials removed' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to remove provider credentials' });
+  }
+});
+
+// PUT /api/email/priority — set the failover order, e.g. {"priority":
+// ["brevo","sendgrid","smtp"]}. Send is attempted against each provider in
+// order until one succeeds; an empty/omitted priority reverts to the old
+// single-provider behavior (whatever email_provider currently points to).
+router.put('/priority', requireAdmin, async (req, res) => {
+  try {
+    const priority = req.body?.priority;
+    if (!Array.isArray(priority)) return res.status(400).json({ error: 'priority must be an array of provider keys' });
+    const valid = priority.every((p) => p === 'smtp' || !!API_PROVIDERS[p]);
+    if (!valid) return res.status(400).json({ error: 'priority contains an unknown provider key' });
+    await query(
+      "INSERT INTO settings (key,value) VALUES ('email_provider_priority',$1) ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value, updated_at=NOW()",
+      [JSON.stringify(priority)]
+    );
+    res.json({ message: 'Failover order saved', priority });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to save failover order' });
+  }
+});
+
 // POST /api/email/test
 // Professional, on-brand content for the admin's "send test email" action —
 // this is what an admin actually reads to confirm delivery works, so it
@@ -109,22 +247,41 @@ function buildTestEmailContent({ body, storeName, providerLabel, fromAddress, to
   return String(body || '').replace(/{{\s*(\w+)\s*}}/g, (_, key) => vars[key] !== undefined ? vars[key] : '');
 }
 
+// Verifies a single provider's credentials without sending anything.
+// Accepts an optional inline `settings` override so the admin can verify
+// what's currently typed in the form — this is the fix for "clicking Test
+// doesn't work": it used to always re-read whatever was last SAVED to the
+// database, silently ignoring anything typed but not yet saved.
 router.post('/test-connection', requireAdmin, async (req, res) => {
   try {
-    const s = await getEmailSettings();
-    const provider = resolveProvider(s);
+    const saved = await getEmailSettings();
+    const s = mergeSettingsOverride(saved, req.body?.settings);
+    // Explicit provider param lets the per-provider "Test" button in the
+    // new failover UI check exactly that card, regardless of which
+    // provider is currently "primary".
+    const provider = req.body?.provider || resolveProvider(s);
     const fromAddress = s.email_from_address || s.smtp_user;
     if (!fromAddress) return res.status(400).json({ error: 'From address is required' });
     if (provider !== 'smtp') {
       const meta = API_PROVIDERS[provider];
-      if (!s.email_api_key) return res.status(400).json({ error: `${meta.label} API key is not configured` });
-      if (meta.fields.includes('domain') && !s.email_api_domain) return res.status(400).json({ error: `${meta.label} sending domain is required` });
+      if (!meta) return res.status(400).json({ error: `Unknown provider: ${provider}` });
+      const creds = getProviderCredentials(s, provider);
+      const apiKey = provider === s.email_provider && s.email_api_key ? s.email_api_key : creds.api_key;
+      if (provider === 'custom') {
+        if (!(s.api_url || creds.api_url)) return res.status(400).json({ error: 'Custom API URL is required' });
+        // No generic "verify" call exists for an arbitrary API — a real
+        // Send Test Email is the meaningful check for Custom providers.
+        return res.json({ ok: true, provider, message: 'Custom API endpoint saved — use "Send Test Email" below to verify it actually delivers.' });
+      }
+      if (!apiKey) return res.status(400).json({ error: `${meta.label} API key is not configured` });
+      const domain = provider === s.email_provider && s.email_api_domain ? s.email_api_domain : creds.domain;
+      if (meta.fields.includes('domain') && !domain) return res.status(400).json({ error: `${meta.label} sending domain is required` });
       const checks = {
-        brevo: ['https://api.brevo.com/v3/account', { 'api-key': s.email_api_key, Accept: 'application/json' }],
-        sendgrid: ['https://api.sendgrid.com/v3/user/profile', { Authorization: `Bearer ${s.email_api_key}` }],
-        mailgun: [`https://api.mailgun.net/v3/${encodeURIComponent(s.email_api_domain)}/domains`, { Authorization: `Basic ${Buffer.from(`api:${s.email_api_key}`).toString('base64')}` }],
-        postmark: ['https://api.postmarkapp.com/server', { 'X-Postmark-Server-Token': s.email_api_key, Accept: 'application/json' }],
-        resend: ['https://api.resend.com/domains', { Authorization: `Bearer ${s.email_api_key}` }],
+        brevo: ['https://api.brevo.com/v3/account', { 'api-key': apiKey, Accept: 'application/json' }],
+        sendgrid: ['https://api.sendgrid.com/v3/user/profile', { Authorization: `Bearer ${apiKey}` }],
+        mailgun: [`https://api.mailgun.net/v3/${encodeURIComponent(domain)}/domains`, { Authorization: `Basic ${Buffer.from(`api:${apiKey}`).toString('base64')}` }],
+        postmark: ['https://api.postmarkapp.com/server', { 'X-Postmark-Server-Token': apiKey, Accept: 'application/json' }],
+        resend: ['https://api.resend.com/domains', { Authorization: `Bearer ${apiKey}` }],
       };
       const [url, headers] = checks[provider] || [];
       const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), 10000);
@@ -140,56 +297,131 @@ router.post('/test-connection', requireAdmin, async (req, res) => {
   } catch (error) { res.status(500).json({ error: `Connection test failed: ${error.message}` }); }
 });
 
+// Sends a real test email through the full configured failover chain —
+// the same code path (sendEmail) real order/account emails use — so a
+// passing test actually means live emails will go out, not just that one
+// isolated check succeeded. Accepts an optional inline `settings` override
+// (same fix as test-connection above): the admin's currently-typed form
+// values are what gets tested, whether or not they've clicked Save yet.
 router.post('/test', requireAdmin, async (req, res) => {
   try {
     const result = await query("SELECT key, value FROM settings WHERE key LIKE 'smtp_%' OR key LIKE 'email_%'");
-    const s = {};
-    result.rows.forEach((r) => { s[r.key] = r.value; });
+    const saved = {};
+    result.rows.forEach((r) => { saved[r.key] = r.value; });
+    const s = mergeSettingsOverride(saved, req.body?.settings);
 
     const { to } = req.body;
     if (!to) return res.status(400).json({ error: 'Recipient email required' });
 
-    const provider = resolveProvider(s);
     const storeName = s.email_from_name || 'Noor Mist';
     const fromAddress = s.email_from_address || s.smtp_user;
-    const providerLabel = provider === 'smtp' ? 'SMTP' : API_PROVIDERS[provider].label;
-
-    if (provider !== 'smtp') {
-      const meta = API_PROVIDERS[provider];
-      if (!s.email_api_key) return res.status(400).json({ error: `${meta.label} API key not configured` });
-      if (!fromAddress) return res.status(400).json({ error: `"From Address" is required to send via ${meta.label}` });
-      if (meta.fields.includes('domain') && !s.email_api_domain) {
-        return res.status(400).json({ error: `${meta.label} requires a sending domain — set it in Email Settings` });
-      }
-    } else if (!s.smtp_host) {
-      return res.status(400).json({ error: 'Email is not configured — add an API key or SMTP settings' });
-    }
+    const labelFor = (p) => (p === 'smtp' ? 'SMTP' : API_PROVIDERS[p]?.label || p);
+    // Best-effort provider name for the email's own body text — the actual
+    // provider used (which may differ if this one fails and it falls back)
+    // is reported back to the admin in the API response regardless.
+    const predictedProvider = labelFor(resolveProviderChain(s)[0]);
 
     const subjectTemplate = s.email_test_subject || `${storeName} — Email Configuration Test`;
-    const subject = subjectTemplate.replace(/{{\s*(\w+)\s*}}/g, (_, key) => ({ store_name: storeName, provider: providerLabel, from_address: fromAddress || '', recipient_email: to })[key] ?? '');
     const body = s.email_test_body || '<h1>Email Delivery Confirmed</h1><p>This is a test email sent from {{store_name}}.</p><p>Provider: <strong>{{provider}}</strong></p><p>From: {{from_address}}</p><p>Sent to: {{recipient_email}}</p><p>Sent at: {{sent_at}}</p>';
 
     // Delegate the actual send to the shared sendEmail() path so the test
-    // gets identical provider handling AND the same branded shell/footer
-    // every real customer email gets — not a separate, unstyled code path.
-    await sendEmail({
-      to,
-      subject,
-      html: buildTestEmailContent({ body, storeName, providerLabel, fromAddress, to }),
-      settings: s,
-      footerNote: s.email_test_footer || 'This is an automated test message and does not require a reply.',
-    });
+    // gets identical provider handling AND failover behavior AND the same
+    // branded shell/footer every real customer email gets — not a
+    // separate, unstyled code path that could pass while the real path fails.
+    let sendResult;
+    try {
+      sendResult = await sendEmail({
+        to,
+        subject: subjectTemplate.replace(/{{\s*(\w+)\s*}}/g, (_, key) => ({ store_name: storeName, provider: predictedProvider, from_address: fromAddress || '', recipient_email: to })[key] ?? ''),
+        html: buildTestEmailContent({ body, storeName, providerLabel: predictedProvider, fromAddress, to }),
+        settings: s,
+        footerNote: s.email_test_footer || 'This is an automated test message and does not require a reply.',
+      });
+    } catch (sendError) {
+      const attempts = sendError.attempts || [];
+      const summary = attempts.length
+        ? attempts.map((a) => `${labelFor(a.provider)}: ${a.status === 'sent' ? 'sent' : a.error}`).join(' | ')
+        : sendError.message;
+      await query("INSERT INTO settings (key,value) VALUES ('email_last_test_at',$1) ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value, updated_at=NOW()", [new Date().toISOString()]).catch(()=>{});
+      await query("INSERT INTO settings (key,value) VALUES ('email_last_test_status','failed') ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value, updated_at=NOW()").catch(()=>{});
+      await query("INSERT INTO settings (key,value) VALUES ('email_last_test_error',$1) ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value, updated_at=NOW()", [summary]).catch(()=>{});
+      return res.status(400).json({ error: attempts.length > 1 ? `All configured providers failed — ${summary}` : summary, attempts });
+    }
+
+    if (!sendResult.ok) {
+      // Genuinely nothing configured at all (no provider, no from address).
+      return res.status(400).json({ error: 'Email is not configured — add an API key or SMTP settings' });
+    }
+
+    const providerLabel = labelFor(sendResult.provider);
+    const attempts = sendResult.attempts || [];
+    const failedFirst = attempts.filter((a) => a.status === 'failed');
+    const note = failedFirst.length
+      ? ` (fell back from ${failedFirst.map((a) => labelFor(a.provider)).join(', ')} after failure)`
+      : '';
 
     await query("INSERT INTO settings (key,value) VALUES ('email_last_test_at',$1) ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value, updated_at=NOW()", [new Date().toISOString()]);
     await query("INSERT INTO settings (key,value) VALUES ('email_last_test_status','success') ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value, updated_at=NOW()");
     await query("INSERT INTO settings (key,value) VALUES ('email_last_test_provider',$1) ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value, updated_at=NOW()", [providerLabel]);
     await query("INSERT INTO settings (key,value) VALUES ('email_last_test_error','') ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value, updated_at=NOW()");
-    res.json({ message: `Test email sent successfully via ${providerLabel}` });
+    res.json({ message: `Test email sent successfully via ${providerLabel}${note}`, provider: sendResult.provider, attempts });
   } catch (error) {
     await query("INSERT INTO settings (key,value) VALUES ('email_last_test_at',$1) ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value, updated_at=NOW()", [new Date().toISOString()]).catch(()=>{});
     await query("INSERT INTO settings (key,value) VALUES ('email_last_test_status','failed') ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value, updated_at=NOW()").catch(()=>{});
     await query("INSERT INTO settings (key,value) VALUES ('email_last_test_error',$1) ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value, updated_at=NOW()", [error.message]).catch(()=>{});
     res.status(500).json({ error: `Failed to send test email: ${error.message}` });
+  }
+});
+
+// POST /api/email/providers/:key/test — tests exactly ONE provider,
+// bypassing the failover chain entirely. Used by each provider card's own
+// "Test" button so the admin can verify each configured provider
+// individually before relying on it as a fallback. Accepts inline
+// credential overrides the same way /test does.
+router.post('/providers/:key/test', requireAdmin, async (req, res) => {
+  try {
+    const key = req.params.key;
+    if (key !== 'smtp' && !API_PROVIDERS[key]) return res.status(400).json({ error: `Unknown provider: ${key}` });
+    const { to } = req.body;
+    if (!to) return res.status(400).json({ error: 'Recipient email required' });
+
+    const saved = await getEmailSettings();
+    let s = { ...saved };
+    if (req.body?.settings) {
+      // Inline override applies to THIS provider only — merge it into the
+      // per-provider credential shape getProviderCredentials()/
+      // attemptProviderSend() expect, without touching other providers'
+      // saved settings. Blank fields mean "keep existing", same as
+      // mergeSettingsOverride() above.
+      if (key === 'smtp') {
+        s = mergeSettingsOverride(s, req.body.settings);
+      } else {
+        const existing = getProviderCredentials(s, key);
+        s[`email_creds_${key}`] = JSON.stringify(mergeSettingsOverride(existing, req.body.settings));
+      }
+    }
+
+    if (!providerHasCredentials(s, key)) {
+      return res.status(400).json({ error: `${key === 'smtp' ? 'SMTP' : API_PROVIDERS[key].label} is not configured` });
+    }
+
+    const storeName = s.email_from_name || 'Noor Mist';
+    const fromAddress = s.email_from_address || s.smtp_user;
+    if (!fromAddress) return res.status(400).json({ error: '"From Address" is required' });
+    const providerLabel = key === 'smtp' ? 'SMTP' : API_PROVIDERS[key].label;
+    const replyTo = s.email_reply_to || '';
+
+    const subjectTemplate = s.email_test_subject || `${storeName} — Email Configuration Test`;
+    const subject = subjectTemplate.replace(/{{\s*(\w+)\s*}}/g, (_, k) => ({ store_name: storeName, provider: providerLabel, from_address: fromAddress, recipient_email: to })[k] ?? '');
+    const body = s.email_test_body || '<h1>Email Delivery Confirmed</h1><p>This is a test email sent from {{store_name}}.</p><p>Provider: <strong>{{provider}}</strong></p><p>From: {{from_address}}</p><p>Sent to: {{recipient_email}}</p><p>Sent at: {{sent_at}}</p>';
+    const html = buildTestEmailContent({ body, storeName, providerLabel, fromAddress, to });
+
+    await attemptProviderSend(key, s, { fromName: storeName, fromAddress, replyTo, to, subject, html });
+    await query(`INSERT INTO email_delivery_logs (recipient, subject, email_type, provider, status, error_message, provider_message_id, duration_ms) VALUES ($1,$2,$3,$4,'sent',NULL,NULL,0)`, [to, subject, 'test', key]).catch(() => {});
+    res.json({ message: `Test email sent successfully via ${providerLabel}` });
+  } catch (error) {
+    await query(`INSERT INTO email_delivery_logs (recipient, subject, email_type, provider, status, error_message, provider_message_id, duration_ms) VALUES ($1,$2,'test',$3,'failed',$4,NULL,0)`, [req.body?.to || '', 'Provider test', req.params.key, error.message]).catch(() => {});
+    res.status(400).json({ error: error.message || 'Failed to send test email' });
   }
 });
 
