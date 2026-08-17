@@ -251,34 +251,45 @@ function providerHasCredentials(settings, providerKey) {
 // Used as the single-provider default when no explicit failover chain
 // (email_provider_priority) has been configured.
 function resolveProvider(settings) {
-  const provider = settings.email_provider;
-  if (provider && provider !== 'smtp' && providerHasCredentials(settings, provider)) {
-    return provider;
+  const preferred = settings.email_provider;
+  if (preferred === 'smtp' && providerHasCredentials(settings, 'smtp')) return 'smtp';
+  if (preferred && preferred !== 'smtp' && API_PROVIDERS[preferred] && providerHasCredentials(settings, preferred)) {
+    return preferred;
   }
-  return 'smtp';
+
+  // If the selected provider is missing/invalid, gracefully choose the first
+  // configured provider instead of blindly falling back to an unconfigured
+  // SMTP profile. This is especially important when an API backup is already
+  // configured and SMTP is not.
+  const configured = ['smtp', ...Object.keys(API_PROVIDERS)].filter((p) => providerHasCredentials(settings, p));
+  return configured[0] || preferred || 'smtp';
 }
 
-// The ordered list of providers to attempt, for failover. Explicit priority
-// (set via PUT /api/email/priority) wins; if the admin has never touched
-// that feature, behavior is unchanged from before — a single provider,
-// exactly as resolveProvider() already picked.
+// Resolve the actual delivery chain. The selected Delivery Provider is always
+// the PRIMARY provider. The admin's saved priority list represents BACKUPS,
+// not a replacement for the primary. After the explicit backups, any other
+// configured providers are appended automatically as a final safety net.
+// This guarantees that a configured API backup is actually tried even if the
+// primary is SMTP, and that one missing provider cannot accidentally disable
+// the whole failover chain.
 function resolveProviderChain(settings) {
-  let chain = [];
-  try { chain = JSON.parse(settings.email_provider_priority || '[]'); } catch { chain = []; }
-  if (!Array.isArray(chain) || !chain.length) chain = [resolveProvider(settings)];
+  let backups = [];
+  try { backups = JSON.parse(settings.email_provider_priority || '[]'); } catch { backups = []; }
+  if (!Array.isArray(backups)) backups = [];
+
+  const primary = resolveProvider(settings);
+  const configured = ['smtp', ...Object.keys(API_PROVIDERS)].filter((p) => providerHasCredentials(settings, p));
+  const orderedBackups = [...backups, ...configured.filter((p) => !backups.includes(p))];
 
   const seen = new Set();
-  const filtered = chain.filter((p) => {
+  const filtered = [primary, ...orderedBackups].filter((p) => {
     if (typeof p !== 'string' || seen.has(p)) return false;
     seen.add(p);
     if (p !== 'smtp' && !API_PROVIDERS[p]) return false;
     return providerHasCredentials(settings, p);
   });
-  // Never return an empty chain — fall through to whatever resolveProvider
-  // picks (which itself degrades to 'smtp'), so the existing "not
-  // configured" handling in sendEmail() still fires with a clear message
-  // instead of the loop below silently doing nothing.
-  return filtered.length ? filtered : [resolveProvider(settings)];
+
+  return filtered.length ? filtered : [primary];
 }
 
 async function sendViaApiProvider(providerKey, { apiKey, domain, apiUrl, apiMethod, apiHeaders, apiBodyTemplate, fromName, fromAddress, replyTo, to, subject, html }) {
@@ -294,6 +305,10 @@ async function attemptProviderSend(providerKey, settings, { fromName, fromAddres
   if (providerKey === 'smtp') {
     const transporter = await createTransporter(settings);
     if (!transporter) throw new Error('SMTP is not configured (no host set)');
+    const host = settings.smtp_host || process.env.EMAIL_HOST || '';
+    if (host.includes('@') || /\s/.test(host)) {
+      throw new Error(`Invalid SMTP host \"${host}\". Use a hostname such as smtp-relay.brevo.com; the SMTP login belongs in Username / Email.`);
+    }
     const info = await transporter.sendMail({
       from: `"${fromName}" <${fromAddress}>`,
       to,

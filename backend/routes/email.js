@@ -52,6 +52,7 @@ router.get('/providers', requireAdmin, (req, res) => {
   const providers = Object.entries(API_PROVIDERS).map(([key, p]) => ({
     key,
     label: p.label,
+    type: 'api',
     fields: p.fields,
     setupUrl: p.setupUrl || null,
   }));
@@ -70,12 +71,13 @@ router.get('/settings', requireAdmin, async (req, res) => {
     const providersStatus = {};
     for (const key of ['smtp', ...Object.keys(API_PROVIDERS)]) {
       if (key === 'smtp') {
-        providersStatus.smtp = { configured: providerHasCredentials(settings, 'smtp') };
+        providersStatus.smtp = { configured: providerHasCredentials(settings, 'smtp'), type: 'smtp' };
         continue;
       }
       const creds = getProviderCredentials(settings, key);
       providersStatus[key] = {
         configured: providerHasCredentials(settings, key),
+        type: 'api',
         api_key_set: !!creds.api_key,
         domain: creds.domain || '',
         api_url: creds.api_url || '',
@@ -99,6 +101,14 @@ router.get('/settings', requireAdmin, async (req, res) => {
     // back to the client, just whether one is on file.
     const email_api_key_set = !!settings.email_api_key;
     delete settings.email_api_key;
+
+    // Per-provider API credentials live under email_creds_<provider>. They are
+    // needed internally by the backend, but MUST NEVER be returned by the
+    // admin settings endpoint. Only non-secret metadata is exposed through
+    // providers_status above (api_key_set, domain, endpoint, etc.).
+    Object.keys(settings).forEach((key) => {
+      if (key.startsWith('email_creds_')) delete settings[key];
+    });
 
     res.json({ settings, smtp_password_set, email_api_key_set, providers_status: providersStatus, provider_priority: priority });
   } catch (error) {
@@ -213,16 +223,17 @@ router.delete('/providers/:key', requireAdmin, async (req, res) => {
   }
 });
 
-// PUT /api/email/priority — set the failover order, e.g. {"priority":
-// ["brevo","sendgrid","smtp"]}. Send is attempted against each provider in
-// order until one succeeds; an empty/omitted priority reverts to the old
-// single-provider behavior (whatever email_provider currently points to).
+// PUT /api/email/priority — set the BACKUP failover order, e.g. {"priority":
+// ["sendgrid","resend","smtp"]}. The selected email_provider is
+// always the primary provider; these keys define the preferred backup order.
+// Any other configured providers are appended automatically as a final safety net.
 router.put('/priority', requireAdmin, async (req, res) => {
   try {
     const priority = req.body?.priority;
     if (!Array.isArray(priority)) return res.status(400).json({ error: 'priority must be an array of provider keys' });
     const valid = priority.every((p) => p === 'smtp' || !!API_PROVIDERS[p]);
     if (!valid) return res.status(400).json({ error: 'priority contains an unknown provider key' });
+    if (new Set(priority).size !== priority.length) return res.status(400).json({ error: 'priority cannot contain duplicate providers' });
     await query(
       "INSERT INTO settings (key,value) VALUES ('email_provider_priority',$1) ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value, updated_at=NOW()",
       [JSON.stringify(priority)]
@@ -290,6 +301,9 @@ router.post('/test-connection', requireAdmin, async (req, res) => {
       return res.json({ ok: true, provider, message: `${meta.label} connection verified successfully.` });
     }
     if (!s.smtp_host || !s.smtp_user || !s.smtp_password) return res.status(400).json({ error: 'SMTP host, username and password are required' });
+    if (String(s.smtp_host).includes('@') || /\s/.test(String(s.smtp_host))) {
+      return res.status(400).json({ error: `Invalid SMTP host \"${s.smtp_host}\". Enter the server hostname (for Brevo: smtp-relay.brevo.com), not the SMTP login email.` });
+    }
     const nodemailer = require('nodemailer');
     const transporter = nodemailer.createTransport({ host: s.smtp_host, port: parseInt(s.smtp_port || '587'), secure: s.smtp_secure === 'true', auth: { user: s.smtp_user, pass: s.smtp_password }, family: 4, connectionTimeout: 10000, greetingTimeout: 10000, socketTimeout: 10000 });
     await transporter.verify();
