@@ -142,6 +142,7 @@ const NAV = [
       { path: '/admin/settings', label: 'General', icon: HiCog },
       { path: '/admin/settings', label: 'Announcement Bar', icon: HiBell },
       { path: '/admin/email-settings', label: 'Email', icon: HiMail },
+      { path: '/admin/whatsapp-settings', label: 'WhatsApp Notifications', icon: HiAnnotation },
       { path: '/admin/payment-settings', label: 'Payment & Shipping', icon: HiCreditCard },
     ],
   },

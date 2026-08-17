@@ -45,6 +45,33 @@ function mergeSettingsOverride(saved, override) {
   return merged;
 }
 
+function mergeProviderTestSettings(saved, providerKey, override) {
+  const merged = { ...saved };
+  if (!override || typeof override !== 'object') return merged;
+  if (providerKey === 'smtp') return mergeSettingsOverride(merged, override);
+
+  const existing = getProviderCredentials(merged, providerKey);
+  const providerOverride = {
+    api_key: override.email_api_key ?? override.api_key,
+    domain: override.email_api_domain ?? override.domain,
+    api_url: override.api_url,
+    api_method: override.api_method,
+    api_headers: override.api_headers,
+    api_body_template: override.api_body_template,
+  };
+  merged[`email_creds_${providerKey}`] = JSON.stringify(mergeSettingsOverride(existing, providerOverride));
+  return mergeSettingsOverride(merged, {
+    email_provider: override.email_provider,
+    email_from_name: override.email_from_name,
+    email_from_address: override.email_from_address,
+    email_reply_to: override.email_reply_to,
+    email_site_url: override.email_site_url,
+    email_test_subject: override.email_test_subject,
+    email_test_body: override.email_test_body,
+    email_test_footer: override.email_test_footer,
+  });
+}
+
 // GET /api/email/providers — lets the admin UI render provider options
 // (and which extra fields, like Mailgun's domain, each one needs) without
 // hardcoding the list on the frontend.
@@ -271,7 +298,7 @@ router.post('/test-connection', requireAdmin, async (req, res) => {
     // new failover UI check exactly that card, regardless of which
     // provider is currently "primary".
     const provider = req.body?.provider || resolveProvider(s);
-    const fromAddress = s.email_from_address || s.smtp_user;
+    const fromAddress = s.email_from_address || s.smtp_user || process.env.EMAIL_FROM || process.env.EMAIL_USER;
     if (!fromAddress) return res.status(400).json({ error: 'From address is required' });
     if (provider !== 'smtp') {
       const meta = API_PROVIDERS[provider];
@@ -300,12 +327,15 @@ router.post('/test-connection', requireAdmin, async (req, res) => {
       finally { clearTimeout(timer); }
       return res.json({ ok: true, provider, message: `${meta.label} connection verified successfully.` });
     }
-    if (!s.smtp_host || !s.smtp_user || !s.smtp_password) return res.status(400).json({ error: 'SMTP host, username and password are required' });
-    if (String(s.smtp_host).includes('@') || /\s/.test(String(s.smtp_host))) {
-      return res.status(400).json({ error: `Invalid SMTP host \"${s.smtp_host}\". Enter the server hostname (for Brevo: smtp-relay.brevo.com), not the SMTP login email.` });
+    const smtpHost = s.smtp_host || process.env.EMAIL_HOST || '';
+    const smtpUser = s.smtp_user || process.env.EMAIL_USER || '';
+    const smtpPass = s.smtp_password || process.env.EMAIL_PASS || '';
+    if (!smtpHost || !smtpUser || !smtpPass) return res.status(400).json({ error: 'SMTP host, username and password are required' });
+    if (String(smtpHost).includes('@') || /\s/.test(String(smtpHost))) {
+      return res.status(400).json({ error: `Invalid SMTP host "${smtpHost}". Enter the server hostname (for Brevo: smtp-relay.brevo.com), not the SMTP login email.` });
     }
     const nodemailer = require('nodemailer');
-    const transporter = nodemailer.createTransport({ host: s.smtp_host, port: parseInt(s.smtp_port || '587'), secure: s.smtp_secure === 'true', auth: { user: s.smtp_user, pass: s.smtp_password }, family: 4, connectionTimeout: 10000, greetingTimeout: 10000, socketTimeout: 10000 });
+    const transporter = nodemailer.createTransport({ host: smtpHost, port: parseInt(s.smtp_port || process.env.EMAIL_PORT || '587'), secure: (s.smtp_secure ?? process.env.EMAIL_SECURE) === 'true', auth: { user: smtpUser, pass: smtpPass }, family: 4, connectionTimeout: 10000, greetingTimeout: 10000, socketTimeout: 10000 });
     await transporter.verify();
     return res.json({ ok: true, provider: 'smtp', message: 'SMTP connection and authentication verified successfully.' });
   } catch (error) { res.status(500).json({ error: `Connection test failed: ${error.message}` }); }
@@ -322,13 +352,14 @@ router.post('/test', requireAdmin, async (req, res) => {
     const result = await query("SELECT key, value FROM settings WHERE key LIKE 'smtp_%' OR key LIKE 'email_%'");
     const saved = {};
     result.rows.forEach((r) => { saved[r.key] = r.value; });
-    const s = mergeSettingsOverride(saved, req.body?.settings);
+    const requestedProvider = req.body?.settings?.email_provider || saved.email_provider || 'smtp';
+    const s = mergeProviderTestSettings(saved, requestedProvider, req.body?.settings);
 
     const { to } = req.body;
     if (!to) return res.status(400).json({ error: 'Recipient email required' });
 
     const storeName = s.email_from_name || 'Noor Mist';
-    const fromAddress = s.email_from_address || s.smtp_user;
+    const fromAddress = s.email_from_address || s.smtp_user || process.env.EMAIL_FROM || process.env.EMAIL_USER;
     const labelFor = (p) => (p === 'smtp' ? 'SMTP' : API_PROVIDERS[p]?.label || p);
     // Best-effort provider name for the email's own body text — the actual
     // provider used (which may differ if this one fails and it falls back)
@@ -359,7 +390,7 @@ router.post('/test', requireAdmin, async (req, res) => {
       await query("INSERT INTO settings (key,value) VALUES ('email_last_test_at',$1) ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value, updated_at=NOW()", [new Date().toISOString()]).catch(()=>{});
       await query("INSERT INTO settings (key,value) VALUES ('email_last_test_status','failed') ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value, updated_at=NOW()").catch(()=>{});
       await query("INSERT INTO settings (key,value) VALUES ('email_last_test_error',$1) ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value, updated_at=NOW()", [summary]).catch(()=>{});
-      return res.status(400).json({ error: attempts.length > 1 ? `All configured providers failed — ${summary}` : summary, attempts });
+      return res.status(502).json({ error: attempts.length > 1 ? `All configured providers failed — ${summary}` : summary, attempts });
     }
 
     if (!sendResult.ok) {
@@ -400,27 +431,14 @@ router.post('/providers/:key/test', requireAdmin, async (req, res) => {
     if (!to) return res.status(400).json({ error: 'Recipient email required' });
 
     const saved = await getEmailSettings();
-    let s = { ...saved };
-    if (req.body?.settings) {
-      // Inline override applies to THIS provider only — merge it into the
-      // per-provider credential shape getProviderCredentials()/
-      // attemptProviderSend() expect, without touching other providers'
-      // saved settings. Blank fields mean "keep existing", same as
-      // mergeSettingsOverride() above.
-      if (key === 'smtp') {
-        s = mergeSettingsOverride(s, req.body.settings);
-      } else {
-        const existing = getProviderCredentials(s, key);
-        s[`email_creds_${key}`] = JSON.stringify(mergeSettingsOverride(existing, req.body.settings));
-      }
-    }
+    const s = mergeProviderTestSettings(saved, key, req.body?.settings);
 
     if (!providerHasCredentials(s, key)) {
       return res.status(400).json({ error: `${key === 'smtp' ? 'SMTP' : API_PROVIDERS[key].label} is not configured` });
     }
 
     const storeName = s.email_from_name || 'Noor Mist';
-    const fromAddress = s.email_from_address || s.smtp_user;
+    const fromAddress = s.email_from_address || s.smtp_user || process.env.EMAIL_FROM || process.env.EMAIL_USER;
     if (!fromAddress) return res.status(400).json({ error: '"From Address" is required' });
     const providerLabel = key === 'smtp' ? 'SMTP' : API_PROVIDERS[key].label;
     const replyTo = s.email_reply_to || '';
@@ -435,7 +453,7 @@ router.post('/providers/:key/test', requireAdmin, async (req, res) => {
     res.json({ message: `Test email sent successfully via ${providerLabel}` });
   } catch (error) {
     await query(`INSERT INTO email_delivery_logs (recipient, subject, email_type, provider, status, error_message, provider_message_id, duration_ms) VALUES ($1,$2,'test',$3,'failed',$4,NULL,0)`, [req.body?.to || '', 'Provider test', req.params.key, error.message]).catch(() => {});
-    res.status(400).json({ error: error.message || 'Failed to send test email' });
+    res.status(502).json({ error: error.message || 'Failed to send test email', provider: req.params.key });
   }
 });
 

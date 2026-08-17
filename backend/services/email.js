@@ -239,7 +239,12 @@ function getProviderCredentials(settings, providerKey) {
 }
 
 function providerHasCredentials(settings, providerKey) {
-  if (providerKey === 'smtp') return !!settings.smtp_host;
+  if (providerKey === 'smtp') {
+    const host = settings.smtp_host || process.env.EMAIL_HOST;
+    const user = settings.smtp_user || process.env.EMAIL_USER;
+    const pass = settings.smtp_password || process.env.EMAIL_PASS;
+    return !!(host && user && pass);
+  }
   if (!API_PROVIDERS[providerKey]) return false;
   const creds = getProviderCredentials(settings, providerKey);
   if (providerKey === 'custom') return !!(creds.api_url && creds.api_body_template);
