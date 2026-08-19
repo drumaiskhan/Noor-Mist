@@ -3,26 +3,11 @@
   command = "npm run build"
   publish = "dist"
 
-# ================================================================
-# Domain independence
-# ----------------------------------------------------------------
-# The frontend calls the relative path "/api" (see
-# frontend/src/services/api.js). These proxy rules forward that,
-# and locally-stored upload paths under "/uploads", to the Railway
-# backend -- same-origin, from the browser's point of view, no matter
-# which domain is pointed at this Netlify site. That means:
-#   - no CORS_ORIGIN entry needed for a new custom domain
-#   - no rebuild/redeploy needed for a new custom domain
-#   - just point the domain's DNS at this Netlify site
-#
-# If the Railway backend URL ever changes, update it in the two
-# rules below (Netlify does not support env var interpolation
-# inside netlify.toml redirect targets).
-#
-# Proxy rules must come before the SPA catch-all so they aren't
-# shadowed by it.
-# ================================================================
-
+# Domain-independent deployment.
+# The frontend calls the Railway API directly in production, so a custom
+# domain does not depend on Netlify's /api proxy behavior. These proxy
+# rules are retained for compatibility with direct /api and /uploads URLs.
+# They must remain before the SPA catch-all.
 [[redirects]]
   from = "/api/*"
   to = "https://noor-mist-production.up.railway.app/api/:splat"

@@ -64,9 +64,26 @@ const allowedOrigins = [...new Set([...DEFAULT_ALLOWED_ORIGINS, ...envOrigins])]
 function isOriginAllowed(origin) {
   if (!origin) return true; // server-to-server calls, curl, health checks — no Origin header
   if (allowedOrigins.includes(origin)) return true;
+
+  // Noor-Mist is intentionally deployable on arbitrary custom domains.
+  // For browser requests, allow only secure HTTPS origins (plus the
+  // explicit localhost development origins above). We still reflect the
+  // requesting origin instead of using "*" because credentials are enabled.
   try {
-    const { hostname } = new URL(origin);
-    return ALLOWED_ORIGIN_PATTERNS.some((pattern) => pattern.test(hostname));
+    const parsed = new URL(origin);
+    if (parsed.protocol === 'https:') return true;
+
+    // Keep local HTTP development support without opening HTTP origins
+    // generally in production.
+    if (
+      process.env.NODE_ENV !== 'production' &&
+      parsed.protocol === 'http:' &&
+      (parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1')
+    ) {
+      return true;
+    }
+
+    return ALLOWED_ORIGIN_PATTERNS.some((pattern) => pattern.test(parsed.hostname));
   } catch {
     return false;
   }
@@ -162,6 +179,16 @@ app.use('/api', (req, res, next) => {
   res.set('Pragma', 'no-cache');
   res.set('Expires', '0');
   next();
+});
+
+// Lightweight health endpoint for deployment/domain diagnostics.
+// This does not touch authentication or the database.
+app.get('/api/health', (req, res) => {
+  res.status(200).json({
+    success: true,
+    status: 'ok',
+    service: 'noor-mist-api',
+  });
 });
 
 // ================================

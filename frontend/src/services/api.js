@@ -9,8 +9,15 @@ import axios from 'axios';
 // this fallback just keeps things working if that ever changes).
 // VITE_API_URL remains supported for anyone who wants to point a build
 // at a specific backend URL explicitly (e.g. a staging backend).
+// Production uses the Railway API directly instead of relying on a
+// domain-specific Netlify /api proxy. This makes the same frontend build
+// work on the Netlify subdomain and on any custom domain.
+// VITE_API_URL can still override this for staging/custom deployments.
 const RAW_API_URL =
-  import.meta.env.VITE_API_URL || (import.meta.env.DEV ? "http://localhost:3001/api" : "/api");
+  import.meta.env.VITE_API_URL ||
+  (import.meta.env.DEV
+    ? "http://localhost:3001/api"
+    : "https://noor-mist-production.up.railway.app/api");
 // Guard against a misconfigured env var that omits the /api segment
 const API_URL = RAW_API_URL.replace(/\/+$/, "").endsWith("/api")
   ? RAW_API_URL.replace(/\/+$/, "")
