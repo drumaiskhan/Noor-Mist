@@ -4,7 +4,7 @@ const crypto = require('crypto');
 const { body, validationResult } = require('express-validator');
 const { query } = require('../config/database');
 const { authenticate, generateToken } = require('../middleware/auth');
-const { sendWelcomeEmail, sendEmailVerificationEmail, sendPasswordResetEmail } = require('../services/email');
+const { sendWelcomeEmail, sendEmailVerificationEmail, sendPasswordResetEmail, getEmailSettings, getPublicSiteUrl } = require('../services/email');
 
 const router = express.Router();
 
@@ -40,7 +40,7 @@ router.post('/register', [
     );
     const user = result.rows[0];
 
-    const baseUrl = process.env.SITE_URL || process.env.FRONTEND_URL || 'http://localhost:5173';
+    const baseUrl = getPublicSiteUrl(await getEmailSettings());
     const verificationLink = `${baseUrl.replace(/\/$/, '')}/verify-email?token=${encodeURIComponent(rawToken)}`;
     sendEmailVerificationEmail(user, verificationLink, otp).catch((e) => console.error('verification email failed:', e.message));
 
@@ -141,7 +141,7 @@ router.post('/resend-verification', [body('email').isEmail().normalizeEmail()], 
     const otp = crypto.randomInt(100000, 1000000).toString();
     const otpHash = await bcrypt.hash(otp, 10);
     await query(`UPDATE users SET email_verification_token_hash=$1,email_verification_expires=$2,email_verification_otp_hash=$3,email_verification_otp_expires=$2,email_verification_otp_attempts=0 WHERE id=$4`, [tokenHash, expires, otpHash, user.id]);
-    const baseUrl = process.env.SITE_URL || process.env.FRONTEND_URL || 'http://localhost:5173';
+    const baseUrl = getPublicSiteUrl(await getEmailSettings());
     const link = `${baseUrl.replace(/\/$/, '')}/verify-email?token=${encodeURIComponent(rawToken)}`;
     sendEmailVerificationEmail(user, link, otp).catch((e) => console.error('verification email failed:', e.message));
     res.json(generic);
@@ -278,7 +278,7 @@ router.post('/forgot-password', [
       [token, expires, otpHash, otpExpires, user.id]
     );
 
-    const baseUrl = process.env.SITE_URL || process.env.FRONTEND_URL || 'http://localhost:5173';
+    const baseUrl = getPublicSiteUrl(await getEmailSettings());
     const resetLink = `${baseUrl}/reset-password?token=${token}`;
 
     sendPasswordResetEmail(user, resetLink, otp).catch((e) => console.error('password reset email failed:', e.message));

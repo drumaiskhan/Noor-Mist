@@ -372,7 +372,7 @@ export default function AdminLayout() {
       </AnimatePresence>
 
       <aside
-        className={`fixed lg:sticky top-0 left-0 h-dvh max-h-dvh w-72 bg-noir-light border-r border-gold/10 z-50 flex flex-col transition-transform duration-300 lg:translate-x-0 ${
+        className={`fixed lg:sticky top-0 left-0 h-dvh max-h-dvh lg:h-screen lg:max-h-screen w-72 flex-shrink-0 self-stretch bg-noir-light border-r border-gold/10 z-50 flex flex-col transition-transform duration-300 lg:translate-x-0 ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >

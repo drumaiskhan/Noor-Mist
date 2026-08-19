@@ -3,4 +3,40 @@
   command = "npm run build"
   publish = "dist"
 
-# API and backend/upload URLs are configured with VITE_API_URL rather than a hardcoded deployment.
+# ================================================================
+# Domain independence
+# ----------------------------------------------------------------
+# The frontend calls the relative path "/api" (see
+# frontend/src/services/api.js). These proxy rules forward that,
+# and locally-stored upload paths under "/uploads", to the Railway
+# backend -- same-origin, from the browser's point of view, no matter
+# which domain is pointed at this Netlify site. That means:
+#   - no CORS_ORIGIN entry needed for a new custom domain
+#   - no rebuild/redeploy needed for a new custom domain
+#   - just point the domain's DNS at this Netlify site
+#
+# If the Railway backend URL ever changes, update it in the two
+# rules below (Netlify does not support env var interpolation
+# inside netlify.toml redirect targets).
+#
+# Proxy rules must come before the SPA catch-all so they aren't
+# shadowed by it.
+# ================================================================
+
+[[redirects]]
+  from = "/api/*"
+  to = "https://noor-mist-production.up.railway.app/api/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/uploads/*"
+  to = "https://noor-mist-production.up.railway.app/uploads/:splat"
+  status = 200
+  force = true
+
+# React Router SPA fallback -- must stay last.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

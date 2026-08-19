@@ -3,9 +3,15 @@
 // Mirrors the structure of services/email.js: self-migrating schema,
 // settings read from the database (admin-editable), a render() helper for
 // {{variable}} substitution, and typed send functions the rest of the app
-// calls. WhatsApp credentials themselves (WHATSAPP_ACCESS_TOKEN etc.) live
-// ONLY in backend environment variables — never in the database, never
-// echoed to the frontend. See getCredentials() below.
+// calls. WhatsApp credentials (Phone Number ID / Access Token / API
+// version) are admin-configurable from the Admin > WhatsApp Notifications
+// screen, stored in the `settings` table the same way SMTP/API email
+// credentials are — the access token is write-only (never echoed back to
+// the frontend, only whether one is set). Railway/environment variables
+// (WHATSAPP_PHONE_NUMBER_ID, WHATSAPP_ACCESS_TOKEN, WHATSAPP_API_VERSION)
+// remain a fallback for local dev / accounts that haven't moved to the
+// admin UI yet — the database value always wins when present. See
+// getCredentials() below.
 //
 // ── Why messages are sent as Meta "template" type, not free text ──────────
 // Meta's Cloud API only allows free-form text messages inside a 24-hour
@@ -137,28 +143,68 @@ async function updateSettings(patch) {
   return result.rows[0];
 }
 
-// ── Backend-only credentials (env vars — never touch PostgreSQL) ─────────
-function getCredentials() {
-  return {
-    phoneNumberId: process.env.WHATSAPP_PHONE_NUMBER_ID || '',
-    accessToken: process.env.WHATSAPP_ACCESS_TOKEN || '',
-    apiVersion: process.env.WHATSAPP_API_VERSION || 'v20.0',
-  };
+// ── Admin-configurable credentials (database, with env-var fallback) ─────
+// Stored in the shared `settings` key/value table under whatsapp_* keys —
+// same table/pattern email.js uses for smtp_*/email_* settings. The access
+// token is the only secret piece; it is never returned to the frontend,
+// only whether one is currently set (mirrors smtp_password_set).
+async function getDbCredentialRow() {
+  const result = await query(
+    "SELECT key, value FROM settings WHERE key IN ('whatsapp_phone_number_id','whatsapp_access_token','whatsapp_api_version')"
+  );
+  const s = {};
+  result.rows.forEach((row) => { s[row.key] = row.value; });
+  return s;
 }
 
-function credentialsConfigured() {
-  const { phoneNumberId, accessToken } = getCredentials();
+async function getCredentials() {
+  const db = await getDbCredentialRow();
+  const phoneNumberId = db.whatsapp_phone_number_id || process.env.WHATSAPP_PHONE_NUMBER_ID || '';
+  const accessToken = db.whatsapp_access_token || process.env.WHATSAPP_ACCESS_TOKEN || '';
+  const apiVersion = db.whatsapp_api_version || process.env.WHATSAPP_API_VERSION || 'v20.0';
+  const source = (db.whatsapp_phone_number_id || db.whatsapp_access_token) ? 'admin' : (process.env.WHATSAPP_PHONE_NUMBER_ID || process.env.WHATSAPP_ACCESS_TOKEN) ? 'environment' : 'none';
+  return { phoneNumberId, accessToken, apiVersion, source };
+}
+
+async function credentialsConfigured() {
+  const { phoneNumberId, accessToken } = await getCredentials();
   return !!(phoneNumberId && accessToken);
 }
 
 // GET /api/admin/whatsapp/settings connection-status helper. Never returns
-// the token itself — only whether each piece is present.
-function getConnectionStatus() {
-  const { phoneNumberId, accessToken, apiVersion } = getCredentials();
+// the token itself — only whether each piece is present, and where it
+// came from (admin-saved vs. environment variable).
+async function getConnectionStatus() {
+  const { phoneNumberId, accessToken, apiVersion, source } = await getCredentials();
   if (!phoneNumberId || !accessToken) {
-    return { state: 'not_configured', label: 'Not Configured' };
+    return { state: 'not_configured', label: 'Not Configured', source };
   }
-  return { state: 'connected', label: 'Connected', apiVersion, phoneNumberIdConfigured: true, accessTokenConfigured: true };
+  return { state: 'connected', label: 'Connected', apiVersion, source, phoneNumberIdConfigured: true, accessTokenConfigured: true };
+}
+
+// Saves admin-entered credentials. A blank access_token means "keep the
+// existing one" — same convention as SMTP password / email API key fields
+// elsewhere in the app, so re-saving the phone number ID or API version
+// alone never wipes out an already-saved token.
+async function saveCredentials({ phone_number_id, access_token, api_version }) {
+  const writes = [];
+  if (phone_number_id !== undefined) writes.push(['whatsapp_phone_number_id', String(phone_number_id || '')]);
+  if (access_token !== undefined && access_token !== '') writes.push(['whatsapp_access_token', String(access_token)]);
+  if (api_version !== undefined) writes.push(['whatsapp_api_version', String(api_version || '').trim() || 'v20.0']);
+  for (const [key, value] of writes) {
+    await query(
+      'INSERT INTO settings (key, value) VALUES ($1,$2) ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value, updated_at=NOW()',
+      [key, value]
+    );
+  }
+  return getConnectionStatus();
+}
+
+// Clears admin-saved credentials, falling back to environment variables
+// (if any) after removal.
+async function clearCredentials() {
+  await query("DELETE FROM settings WHERE key IN ('whatsapp_phone_number_id','whatsapp_access_token','whatsapp_api_version')");
+  return getConnectionStatus();
 }
 
 // ── Template variable extraction / rendering ──────────────────────────────
@@ -229,9 +275,9 @@ function sampleVars() {
 
 // ── Meta WhatsApp Business Cloud API call ─────────────────────────────────
 async function callMetaSendMessage({ to, templateName, templateLanguage, bodyParams }) {
-  const { phoneNumberId, accessToken, apiVersion } = getCredentials();
+  const { phoneNumberId, accessToken, apiVersion } = await getCredentials();
   if (!phoneNumberId || !accessToken) {
-    const err = new Error('WhatsApp is not configured (missing WHATSAPP_PHONE_NUMBER_ID / WHATSAPP_ACCESS_TOKEN)');
+    const err = new Error('WhatsApp is not configured — add the Phone Number ID and Access Token in Admin > WhatsApp Notifications, or set WHATSAPP_PHONE_NUMBER_ID / WHATSAPP_ACCESS_TOKEN in the backend environment.');
     err.code = 'not_configured';
     throw err;
   }
@@ -422,6 +468,9 @@ module.exports = {
   updateSettings,
   getConnectionStatus,
   credentialsConfigured,
+  getCredentials,
+  saveCredentials,
+  clearCredentials,
   extractVariableOrder,
   render,
   buildVarsFromOrder,

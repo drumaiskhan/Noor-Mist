@@ -1,6 +1,16 @@
 import axios from 'axios';
 
-const RAW_API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001/api";
+// Domain-independent by default: with no VITE_API_URL set, production
+// builds call the relative "/api" path, which Netlify proxies to the
+// Railway backend (see netlify.toml) — so the exact same build works on
+// noormist.me, a future custom domain, or the Netlify subdomain without
+// a rebuild. Local dev falls back to the backend dev server directly
+// (Vite's own "/api" proxy in vite.config.js covers relative calls too,
+// this fallback just keeps things working if that ever changes).
+// VITE_API_URL remains supported for anyone who wants to point a build
+// at a specific backend URL explicitly (e.g. a staging backend).
+const RAW_API_URL =
+  import.meta.env.VITE_API_URL || (import.meta.env.DEV ? "http://localhost:3001/api" : "/api");
 // Guard against a misconfigured env var that omits the /api segment
 const API_URL = RAW_API_URL.replace(/\/+$/, "").endsWith("/api")
   ? RAW_API_URL.replace(/\/+$/, "")
@@ -304,6 +314,11 @@ export const emailTemplatesAPI = {
 export const whatsappAPI = {
   getSettings: () => api.get('/admin/whatsapp/settings'),
   updateSettings: (data) => api.put('/admin/whatsapp/settings', data),
+  // Phone Number ID / Access Token / API version — configurable from the
+  // admin panel instead of Railway-only environment variables. Blank
+  // access_token on save means "keep the current one".
+  saveCredentials: (data) => api.put('/admin/whatsapp/credentials', data),
+  deleteCredentials: () => api.delete('/admin/whatsapp/credentials'),
   resetTemplate: () => api.post('/admin/whatsapp/settings/reset'),
   preview: (message_template) => api.post('/admin/whatsapp/preview', { message_template }),
   // Longer timeout — same reasoning as emailAPI.test: a real API round trip

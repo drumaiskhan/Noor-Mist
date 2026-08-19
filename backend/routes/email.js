@@ -338,7 +338,27 @@ router.post('/test-connection', requireAdmin, async (req, res) => {
     const transporter = nodemailer.createTransport({ host: smtpHost, port: parseInt(s.smtp_port || process.env.EMAIL_PORT || '587'), secure: (s.smtp_secure ?? process.env.EMAIL_SECURE) === 'true', auth: { user: smtpUser, pass: smtpPass }, family: 4, connectionTimeout: 10000, greetingTimeout: 10000, socketTimeout: 10000 });
     await transporter.verify();
     return res.json({ ok: true, provider: 'smtp', message: 'SMTP connection and authentication verified successfully.' });
-  } catch (error) { res.status(500).json({ error: `Connection test failed: ${error.message}` }); }
+  } catch (error) {
+    // Raw nodemailer/network error codes are accurate but not
+    // self-explanatory to an admin — translate the common ones into a
+    // plain-language hint appended to the real message, so "Connection
+    // test failed: connect ETIMEDOUT" doesn't leave someone guessing.
+    const code = error.code || '';
+    const msg = error.message || '';
+    let hint = '';
+    if (code === 'ETIMEDOUT' || code === 'ESOCKET' || /timed? ?out/i.test(msg)) {
+      hint = ' — the connection timed out. This almost always means the SMTP port is blocked by your network, firewall, or hosting provider (many hosts, including Railway\'s Free/Hobby tier, block outbound SMTP ports 25/465/587 entirely). Try a different network, or use an API provider (Brevo/SendGrid/etc.) instead — those use HTTPS (port 443), which is essentially never blocked.';
+    } else if (code === 'ECONNREFUSED') {
+      hint = ' — the server actively refused the connection. Double-check the host and port are correct for your provider.';
+    } else if (code === 'EAUTH' || /invalid login|authentication failed|535/i.test(msg)) {
+      hint = ' — the server rejected the username/password. For Gmail/Google Workspace you need an "app password", not your normal login password; for most transactional providers use the SMTP username/key shown on their dashboard, not your account email.';
+    } else if (/wrong version number|ssl routines|self.signed/i.test(msg)) {
+      hint = ' — this usually means the Encryption setting doesn\'t match the port (port 465 needs "SSL/TLS", port 587 needs "STARTTLS"). Double-check that pairing above.';
+    } else if (code === 'ENOTFOUND' || code === 'EAI_AGAIN') {
+      hint = ' — the hostname could not be resolved. Check the SMTP Host field for typos.';
+    }
+    res.status(500).json({ error: `Connection test failed: ${msg}${hint}` });
+  }
 });
 
 // Sends a real test email through the full configured failover chain —

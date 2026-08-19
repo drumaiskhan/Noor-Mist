@@ -10,7 +10,8 @@ const router = express.Router();
 router.get('/settings', requireAdmin, async (req, res) => {
   try {
     const settings = await whatsappService.getSettings();
-    const status = whatsappService.getConnectionStatus();
+    const status = await whatsappService.getConnectionStatus();
+    const creds = await whatsappService.getCredentials();
     res.json({
       settings: {
         enabled: settings.enabled,
@@ -23,6 +24,15 @@ router.get('/settings', requireAdmin, async (req, res) => {
       // Never the raw values — only presence — matches email.js's
       // smtp_password_set / email_api_key_set pattern.
       connection: status,
+      // Phone Number ID isn't a secret (it's just an identifier, not a
+      // credential) so it's safe to echo back for the admin to confirm —
+      // the access token never is.
+      credentials: {
+        phone_number_id: creds.phoneNumberId || '',
+        access_token_set: !!creds.accessToken,
+        api_version: creds.apiVersion,
+        source: creds.source,
+      },
       // The order variables currently appear in message_template maps
       // 1:1 onto Meta's {{1}}, {{2}}, ... positional template parameters.
       variable_mapping: whatsappService.extractVariableOrder(settings.message_template)
@@ -54,6 +64,31 @@ router.put('/settings', requireAdmin, async (req, res) => {
   }
 });
 
+// PUT /api/admin/whatsapp/credentials — save the Meta WhatsApp Business
+// Cloud API credentials from the admin panel (Phone Number ID, Access
+// Token, API version). Blank access_token means "keep the current one".
+router.put('/credentials', requireAdmin, async (req, res) => {
+  try {
+    const { phone_number_id, access_token, api_version } = req.body || {};
+    const status = await whatsappService.saveCredentials({ phone_number_id, access_token, api_version });
+    res.json({ message: 'WhatsApp credentials saved', connection: status });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to save WhatsApp credentials' });
+  }
+});
+
+// DELETE /api/admin/whatsapp/credentials — remove admin-saved credentials
+// (falls back to environment variables, if any, after removal).
+router.delete('/credentials', requireAdmin, async (req, res) => {
+  try {
+    const status = await whatsappService.clearCredentials();
+    res.json({ message: 'WhatsApp credentials removed', connection: status });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to remove WhatsApp credentials' });
+  }
+});
+
 // POST /api/admin/whatsapp/settings/reset — restore default message template
 router.post('/settings/reset', requireAdmin, async (req, res) => {
   try {
@@ -82,8 +117,8 @@ router.post('/test', requireAdmin, async (req, res) => {
   try {
     const { phone } = req.body;
     if (!phone) return res.status(400).json({ error: 'Phone number is required' });
-    if (!whatsappService.credentialsConfigured()) {
-      return res.status(400).json({ error: 'WhatsApp is not configured. Set WHATSAPP_PHONE_NUMBER_ID and WHATSAPP_ACCESS_TOKEN in Railway.' });
+    if (!(await whatsappService.credentialsConfigured())) {
+      return res.status(400).json({ error: 'WhatsApp is not configured. Add the Phone Number ID and Access Token in Admin > WhatsApp Notifications.' });
     }
     await whatsappService.sendTestMessage(phone);
     res.json({ message: '✓ Test message sent successfully' });

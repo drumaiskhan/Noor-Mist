@@ -699,7 +699,16 @@ router.post('/card/create', optionalAuth, async (req, res) => {
     const rawToken = crypto.randomBytes(32).toString('hex');
     const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
 
-    const base = cfg.siteUrl || `${req.protocol}://${req.get('host')}`;
+    // Prefer the admin-configured site URL. Otherwise fall back to the
+    // storefront origin the shopper is actually checking out from (sent
+    // as the standard Origin/Referer header) rather than this API's own
+    // host — the API and storefront are different domains/hosts here
+    // (Railway vs. Netlify/custom domain), so redirecting back to the
+    // API host after Safepay would land on the wrong app.
+    const refererOrigin = (() => {
+      try { return req.get('referer') ? new URL(req.get('referer')).origin : null; } catch { return null; }
+    })();
+    const base = cfg.siteUrl || req.get('origin') || refererOrigin || `${req.protocol}://${req.get('host')}`;
     const { tracker, checkoutUrl } = await safepayService.createCheckoutSession({
       cfg,
       order,

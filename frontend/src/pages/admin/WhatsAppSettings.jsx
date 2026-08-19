@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import {
   HiCheck, HiX, HiRefresh, HiExclamationCircle, HiPaperAirplane,
-  HiDocumentText, HiClock, HiPhone, HiInformationCircle,
+  HiDocumentText, HiClock, HiPhone, HiInformationCircle, HiEye, HiEyeOff,
 } from 'react-icons/hi';
 import { whatsappAPI } from '../../services/api';
 import toast from 'react-hot-toast';
@@ -56,6 +56,12 @@ export default function WhatsAppSettings() {
   const [retryingId, setRetryingId] = useState(null);
   const textareaRef = useRef(null);
 
+  // Connection credentials (Phone Number ID / Access Token / API version) —
+  // configurable here instead of only via Railway environment variables.
+  const [credForm, setCredForm] = useState({ phone_number_id: '', access_token: '', api_version: 'v20.0' });
+  const [showToken, setShowToken] = useState(false);
+  const [savingCreds, setSavingCreds] = useState(false);
+
   const { data: settingsData } = useQuery({
     queryKey: ['whatsappSettings'],
     queryFn: async () => { const { data } = await whatsappAPI.getSettings(); return data; },
@@ -65,6 +71,20 @@ export default function WhatsAppSettings() {
     if (settingsData?.settings) {
       setForm((p) => ({ ...p, ...settingsData.settings }));
       setTemplateDraft(settingsData.settings.message_template || '');
+    }
+  }, [settingsData]);
+
+  // Populate the non-secret credential fields once per fetch — access_token
+  // is intentionally never sent back by the API, so that field always
+  // starts blank (same "leave blank to keep current" convention Email
+  // Settings uses for smtp_password / API keys).
+  useEffect(() => {
+    if (settingsData?.credentials) {
+      setCredForm((p) => ({
+        ...p,
+        phone_number_id: settingsData.credentials.phone_number_id || '',
+        api_version: settingsData.credentials.api_version || 'v20.0',
+      }));
     }
   }, [settingsData]);
 
@@ -145,6 +165,33 @@ export default function WhatsAppSettings() {
     }
   };
 
+  const handleSaveCredentials = async () => {
+    if (!credForm.phone_number_id.trim()) return toast.error('Enter the WhatsApp Phone Number ID');
+    setSavingCreds(true);
+    try {
+      await whatsappAPI.saveCredentials(credForm);
+      setCredForm((p) => ({ ...p, access_token: '' }));
+      queryClient.invalidateQueries({ queryKey: ['whatsappSettings'] });
+      toast.success('WhatsApp credentials saved');
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Failed to save credentials');
+    } finally {
+      setSavingCreds(false);
+    }
+  };
+
+  const handleRemoveCredentials = async () => {
+    if (!window.confirm('Remove the saved WhatsApp Phone Number ID and Access Token? (Environment variables, if any, will be used instead.)')) return;
+    try {
+      await whatsappAPI.deleteCredentials();
+      setCredForm({ phone_number_id: '', access_token: '', api_version: 'v20.0' });
+      queryClient.invalidateQueries({ queryKey: ['whatsappSettings'] });
+      toast.success('WhatsApp credentials removed');
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Failed to remove credentials');
+    }
+  };
+
   const handleRetry = async (id) => {
     setRetryingId(id);
     try {
@@ -182,7 +229,11 @@ export default function WhatsAppSettings() {
             <div className="flex items-center justify-between gap-4 mb-4">
               <div>
                 <h3 className="font-playfair font-bold text-white text-xl">WhatsApp API Status</h3>
-                <p className="text-xs text-gray-500 mt-1">Credentials are configured via backend environment variables only.</p>
+                <p className="text-xs text-gray-500 mt-1">
+                  {connection.source === 'admin' && 'Using credentials saved below.'}
+                  {connection.source === 'environment' && 'Using credentials from backend environment variables.'}
+                  {(!connection.source || connection.source === 'none') && 'Add your Meta WhatsApp Business Cloud API credentials below.'}
+                </p>
               </div>
               <div className={`px-3 py-1.5 rounded-full text-xs font-semibold border ${
                 connection.state === 'connected' ? 'bg-green-500/10 text-green-400 border-green-500/30' : 'bg-gray-800 text-gray-400 border-gray-700'
@@ -200,10 +251,61 @@ export default function WhatsAppSettings() {
                 <p className="text-sm text-white mt-1">{connection.accessTokenConfigured ? 'Configured ✓' : 'Not set'}</p>
               </div>
             </div>
+          </div>
+
+          <div className="luxury-card p-6 space-y-4">
+            <div>
+              <h3 className="font-playfair font-bold text-white text-lg">Meta API Connection</h3>
+              <p className="text-xs text-gray-500 mt-1">From Meta Business Manager → WhatsApp → API Setup. Saved here overrides any WHATSAPP_* environment variables set on the backend.</p>
+            </div>
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="md:col-span-2">
+                <label className="text-xs text-gray-400 mb-1 block">Phone Number ID</label>
+                <input
+                  value={credForm.phone_number_id}
+                  onChange={(e) => setCredForm((p) => ({ ...p, phone_number_id: e.target.value }))}
+                  placeholder="e.g. 109876543210123"
+                  className="w-full bg-noir border border-gray-700 rounded-lg px-3 py-2.5 text-white text-sm focus:border-gold outline-none font-mono"
+                />
+              </div>
+              <div className="md:col-span-2">
+                <label className="text-xs text-gray-400 mb-1 block">Access Token</label>
+                <div className="relative">
+                  <input
+                    type={showToken ? 'text' : 'password'}
+                    value={credForm.access_token}
+                    onChange={(e) => setCredForm((p) => ({ ...p, access_token: e.target.value }))}
+                    placeholder={connection.accessTokenConfigured ? 'Leave blank to keep current token' : 'Paste your permanent access token'}
+                    className="w-full bg-noir border border-gray-700 rounded-lg px-3 py-2.5 pr-10 text-white text-sm focus:border-gold outline-none font-mono"
+                  />
+                  <button type="button" onClick={() => setShowToken((x) => !x)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+                    {showToken ? <HiEyeOff /> : <HiEye />}
+                  </button>
+                </div>
+                {connection.accessTokenConfigured && !credForm.access_token && <p className="text-xs text-gray-500 mt-1">✓ Token saved securely. It is never returned to the browser.</p>}
+              </div>
+              <div>
+                <label className="text-xs text-gray-400 mb-1 block">API Version</label>
+                <input
+                  value={credForm.api_version}
+                  onChange={(e) => setCredForm((p) => ({ ...p, api_version: e.target.value }))}
+                  placeholder="v20.0"
+                  className="w-full bg-noir border border-gray-700 rounded-lg px-3 py-2.5 text-white text-sm focus:border-gold outline-none font-mono"
+                />
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-3 items-center">
+              <button onClick={handleSaveCredentials} disabled={savingCreds} className="btn-gold text-sm disabled:opacity-50">
+                <HiCheck className="w-4 h-4 inline mr-2" />{savingCreds ? 'Saving…' : 'Save Credentials'}
+              </button>
+              {(connection.phoneNumberIdConfigured || connection.accessTokenConfigured) && connection.source === 'admin' && (
+                <button onClick={handleRemoveCredentials} className="text-xs text-red-400 hover:text-red-300">Remove saved credentials</button>
+              )}
+            </div>
             {connection.state !== 'connected' && (
-              <div className="mt-4 flex items-start gap-2 text-xs text-yellow-400 bg-yellow-500/5 border border-yellow-500/20 rounded-lg p-3">
+              <div className="flex items-start gap-2 text-xs text-yellow-400 bg-yellow-500/5 border border-yellow-500/20 rounded-lg p-3">
                 <HiExclamationCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                Set <code className="text-yellow-300">WHATSAPP_PHONE_NUMBER_ID</code> and <code className="text-yellow-300">WHATSAPP_ACCESS_TOKEN</code> in Railway's environment variables to enable sending.
+                Add the Phone Number ID and Access Token above (or set <code className="text-yellow-300">WHATSAPP_PHONE_NUMBER_ID</code> / <code className="text-yellow-300">WHATSAPP_ACCESS_TOKEN</code> in the backend environment) to enable sending.
               </div>
             )}
           </div>

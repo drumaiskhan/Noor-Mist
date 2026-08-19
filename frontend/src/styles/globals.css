@@ -98,13 +98,23 @@ html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   /* Page-level horizontal scroll on mobile is controlled by the
-     documentElement, not body — body's own overflow-x:hidden below
-     does NOT stop the viewport from scrolling sideways if any
-     descendant overflows. This is what was clipping the left edge
-     of product-page text/buttons on phones. Locking it here, plus
-     a hard max-width, closes that off regardless of which element
-     overflows. */
-  overflow-x: hidden;
+     documentElement, not body — body's own overflow-x below does NOT
+     stop the viewport from scrolling sideways if any descendant
+     overflows. This is what was clipping the left edge of product-page
+     text/buttons on phones. Locking it here, plus a hard max-width,
+     closes that off regardless of which element overflows.
+
+     IMPORTANT: this must be `clip`, not `hidden`. Setting overflow-x to
+     `hidden` (but leaving overflow-y unset) makes the browser silently
+     compute overflow-y as `auto` too — the CSS spec pairs the two axes
+     so you can't have hidden-x/visible-y. That turns <html>/<body> into
+     their own internal scroll container instead of the true viewport,
+     which breaks `position: sticky` for every descendant (e.g. the
+     admin sidebar) — sticky elements then just scroll away with the
+     page instead of staying pinned, and stop once their own content
+     runs out, leaving dead space below them. `clip` blocks the same
+     horizontal overflow without that scroll-container side effect. */
+  overflow-x: clip;
   max-width: 100%;
 }
 
@@ -145,13 +155,16 @@ body {
   font-size: var(--body-font-size);
   line-height: var(--line-height);
   letter-spacing: var(--letter-spacing);
-  overflow-x: hidden;
+  /* See the note on html's overflow-x above — must be `clip`, not
+     `hidden`, or position:sticky breaks site-wide (admin sidebar,
+     "Live Preview" panels, etc.). */
+  overflow-x: clip;
   max-width: 100%;
   position: relative;
 }
 
 #root {
-  overflow-x: hidden;
+  overflow-x: clip;
   max-width: 100%;
 }
 
